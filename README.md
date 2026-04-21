@@ -45,8 +45,7 @@ Greys and whites
 
 ### Nostromo
 Alien/Aliens inspired — aged amber + xenomorph acid
-<img width="3813" height="721" alt="image" src="https://github.com/user-attachments/assets/891b1a05-e92a-4bd4-8886-fb03ec5bc17a" />
-
+<img width="1915" height="478" alt="image" src="https://github.com/user-attachments/assets/815cf45e-911b-4e0e-9cde-0bf4bb73f20e" />
 
 ## Architecture
 
