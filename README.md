@@ -42,10 +42,18 @@ A Warm amber terminal
 Greys and whites
 <img width="1909" height="481" alt="image" src="https://github.com/user-attachments/assets/4105e94d-4cb0-458c-9884-3c54892e3cbc" />
 
+### T-800
+Red phosphor on pure black
+<img width="1910" height="476" alt="image" src="https://github.com/user-attachments/assets/f946a33b-61f0-45b3-8f91-56090b3cdeea" />
 
 ### Nostromo
 Alien/Aliens inspired — aged amber + xenomorph acid
 <img width="1915" height="478" alt="image" src="https://github.com/user-attachments/assets/815cf45e-911b-4e0e-9cde-0bf4bb73f20e" />
+
+### Cyberdyne
+Electric blue on cold steel
+<img width="1914" height="468" alt="image" src="https://github.com/user-attachments/assets/b5d5184f-271f-4fcf-93eb-830b5139f2aa" />
+
 
 ## Architecture
 
