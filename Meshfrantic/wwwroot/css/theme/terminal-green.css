@@ -1,19 +1,19 @@
 /* Terminal Green Theme - Classic phosphor green on black */
 :root {
-    --mesh-green: #00c170;
-    --mesh-bright: #00ff9d;
-    --mesh-dim: #007a45;
-    --mesh-very-dim: #004d2b;
-    --mesh-border: #005c35;
+    --mesh-primary: #00c170;
+    --mesh-primary-light: #00ff9d;
+    --mesh-secondary: #007a45;
+    --mesh-tertiary: #009957;
+    --mesh-border-color: #005c35;
     --mesh-accent: #00c170;
-    --mesh-bg: #000000;
-    --mesh-text: #00c170;
+    --mesh-background: #000000;
+    --mesh-text-color: #00c170;
     --mesh-danger: #ff6666;
     --mesh-warning: #ffaa00;
     --mesh-black: #000000;
 }
 
 html, body {
-    background: var(--mesh-bg);
-    color: var(--mesh-text);
+    background: var(--mesh-background);
+    color: var(--mesh-text-color);
 }

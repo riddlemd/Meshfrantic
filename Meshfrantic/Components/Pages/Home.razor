@@ -4,6 +4,7 @@
 
 <PageTitle>Meshfrantic — Dashboard</PageTitle>
 
+<div class="px-4">
 <h2 class="mb-4">Dashboard</h2>
 
 @if (!Mesh.IsConnected)
@@ -52,8 +53,8 @@ else
     @if (OwnNode != null)
     {
         <div class="card mb-4">
-            <div class="card-header fw-semibold">This Device</div>
-            <div class="card-body">
+            <div class="card__header fw-semibold">This Device</div>
+            <div class="card__body">
                 <div class="row">
                     <div class="col-md-4">
                         <div class="info-row"><span>Long Name</span><strong>@(OwnNode.User?.LongName ?? "—")</strong></div>
@@ -85,11 +86,11 @@ else
     @if (Mesh.Messages.Any())
     {
         <div class="card">
-            <div class="card-header fw-semibold d-flex justify-content-between">
+            <div class="card__header fw-semibold d-flex justify-content-between">
                 <span>Recent Messages</span>
                 <a href="/messages" class="small">View all &rarr;</a>
             </div>
-            <div class="card-body p-0">
+            <div class="card__body p-0">
                 <ul class="list-group list-group-flush">
                     @foreach (var msg in Mesh.Messages.TakeLast(5).Reverse())
                     {
@@ -106,6 +107,7 @@ else
         </div>
     }
 }
+</div>
 
 @code {
     private uint OwnNodeNum => Mesh.Container.MyNodeInfo?.MyNodeNum ?? 0;

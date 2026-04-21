@@ -4,6 +4,7 @@
 
 <PageTitle>Meshfrantic — Commands</PageTitle>
 
+<div class="px-4">
 <h2 class="mb-3">Commands</h2>
 
 @if (!Mesh.IsConnected)
@@ -16,8 +17,8 @@ else
         <!-- Device Config -->
         <div class="col-md-6">
             <div class="card h-100">
-                <div class="card-header fw-semibold">Device</div>
-                <div class="card-body d-flex flex-column gap-3">
+                <div class="card__header fw-semibold">Device</div>
+                <div class="card__body d-flex flex-column gap-3">
 
                     <div>
                         <p class="mb-1 text-muted small">Re-request current configuration and node list from the device.</p>
@@ -51,7 +52,7 @@ else
                             <strong>Danger:</strong> Resets the node database. Cannot be undone.
                         </p>
                         <button class="btn btn-outline-danger" @onclick="() => _showResetDb = true" disabled="@_busy">
-                            Reset Node DB
+                            Reset Node DB & Reboot
                         </button>
                     </div>
 
@@ -90,8 +91,8 @@ else
         <!-- Set Owner -->
         <div class="col-md-6">
             <div class="card h-100">
-                <div class="card-header fw-semibold">Set Owner</div>
-                <div class="card-body">
+                <div class="card__header fw-semibold">Set Owner</div>
+                <div class="card__body">
                     <p class="text-muted small mb-3">Change the display name shown to other mesh nodes.</p>
                     <div class="mb-3">
                         <label class="form-label">Long Name</label>
@@ -107,7 +108,7 @@ else
                     <button class="btn btn-primary"
                             @onclick="SetOwner"
                             disabled="@(string.IsNullOrWhiteSpace(_longName) || string.IsNullOrWhiteSpace(_shortName) || _busy)">
-                        Apply
+                        Apply & Reboot
                     </button>
                 </div>
             </div>
@@ -118,11 +119,11 @@ else
     @if (_log.Any())
     {
         <div class="card mt-4">
-            <div class="card-header fw-semibold d-flex justify-content-between">
+            <div class="card__header fw-semibold d-flex justify-content-between">
                 <span>Command Log</span>
                 <button class="btn btn-sm btn-outline-secondary" @onclick="() => _log.Clear()">Clear</button>
             </div>
-            <div class="card-body p-0">
+            <div class="card__body p-0">
                 <ul class="list-group list-group-flush">
                     @foreach (var entry in _log.AsEnumerable().Reverse())
                     {
@@ -138,6 +139,7 @@ else
         </div>
     }
 }
+</div>
 
 @code {
     private bool _busy;

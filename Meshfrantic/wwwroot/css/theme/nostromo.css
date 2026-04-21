@@ -1,19 +1,19 @@
 /* Nostromo theme - Alien/Aliens inspired: aged terminal amber + xenomorph acid */
 :root {
-    --mesh-green: #b89c50;
-    --mesh-bright: #b8e040;
-    --mesh-dim: #6a5828;
-    --mesh-very-dim: #2a2210;
-    --mesh-border: #403a20;
+    --mesh-primary: #b89c50;
+    --mesh-primary-light: #b8e040;
+    --mesh-secondary: #6a5828;
+    --mesh-tertiary: #8a7235;
+    --mesh-border-color: #403a20;
     --mesh-accent: #b89c50;
-    --mesh-bg: #080805;
-    --mesh-text: #b89c50;
+    --mesh-background: #080805;
+    --mesh-text-color: #b89c50;
     --mesh-danger: #c8f020;
     --mesh-warning: #e06a10;
     --mesh-black: #000000;
 }
 
 html, body {
-    background: var(--mesh-bg);
-    color: var(--mesh-text);
+    background: var(--mesh-background);
+    color: var(--mesh-text-color);
 }

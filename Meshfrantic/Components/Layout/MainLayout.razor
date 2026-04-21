@@ -5,94 +5,104 @@
 @implements IDisposable
 
 <div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
+    <!-- Header Section -->
+    <div class="layout-header">
+        <div class="sidebar">
+            <div class="logo">://MESHFRANTIC</div>
+        </div>
+        <div class="header">
+            <div class="connection-bar">
+                <div class="connection-bar__left d-flex align-items-center gap-2">
+                    <div class="status-badge @(Mesh.IsConnected ? "status-badge--connected" : "status-badge--disconnected")">
+                        <span class="status-badge__dot"></span>
+                        @if (Mesh.IsConnected)
+                        {
+                            var nodeInfo = Mesh.Container.MyNodeInfo;
+                            var nodeNum = nodeInfo?.MyNodeNum ?? 0;
+                            var name = nodeNum > 0 ? Mesh.Container.GetNodeDisplayName(nodeNum) : Mesh.ConnectedPort;
+                            <span>@name</span>
+                        }
+                        else
+                        {
+                            <span>Disconnected</span>
+                        }
+                    </div>
+                </div>
 
-    <main>
-        <div class="top-row px-4 connection-bar">
-            <div class="connection-left d-flex align-items-center gap-2">
-                <div class="status-badge @(Mesh.IsConnected ? "status-connected" : "status-disconnected")">
-                    <span class="status-dot"></span>
-                    @if (Mesh.IsConnected)
+                <CurrentDateTime />
+
+                <div class="connection-bar__right d-flex align-items-center gap-2">
+                    <span class="theme-control__label">Theme</span>
+                    <select class="form-select form-select-sm theme-control__select" value="@_selectedTheme" @onchange="OnThemeChanged">
+                        @foreach (var theme in ThemeService.Themes)
+                        {
+                            <option value="@theme.Key">@theme.Value</option>
+                        }
+                    </select>
+
+                    <span class="port-control__label">Port</span>
+                    <select class="form-select form-select-sm port-control__select"
+                            @bind="_selectedPort"
+                            disabled="@Mesh.IsConnected">
+                        <option value="">-- Select port --</option>
+                        @foreach (var port in Mesh.AvailablePorts)
+                        {
+                            <option value="@port">@port</option>
+                        }
+                    </select>
+
+                    <button class="btn btn-sm btn-outline-secondary"
+                            @onclick="RefreshPorts"
+                            disabled="@Mesh.IsConnected"
+                            title="Refresh ports">
+                        &#8635;
+                    </button>
+
+                    @if (!Mesh.IsConnected)
                     {
-                        var nodeInfo = Mesh.Container.MyNodeInfo;
-                        var nodeNum = nodeInfo?.MyNodeNum ?? 0;
-                        var name = nodeNum > 0 ? Mesh.Container.GetNodeDisplayName(nodeNum) : Mesh.ConnectedPort;
-                        <span>@name</span>
+                        <button class="btn btn-sm btn-success"
+                                @onclick="Connect"
+                                disabled="@(string.IsNullOrEmpty(_selectedPort) || _busy)">
+                            @if (_busy) { <span>Connecting...</span> } else { <span>Connect</span> }
+                        </button>
                     }
                     else
                     {
-                        <span>Disconnected</span>
+                        <button class="btn btn-sm btn-danger"
+                                @onclick="Disconnect"
+                                disabled="@_busy">
+                            Disconnect
+                        </button>
+                    }
+
+                    @if (Mesh.IsConnected && OwnBattery is > 0 and var bat)
+                    {
+                        <div class="battery" style="color: @BatteryColor(bat)" title="Battery: @bat%">
+                            <span class="battery__icon">
+                                <span class="battery__fill" style="width: @bat%"></span>
+                            </span>
+                            <span class="battery__percentage">@bat%</span>
+                        </div>
                     }
                 </div>
-            </div>
 
-            <div class="connection-right d-flex align-items-center gap-2">
-                <span class="theme-label">Theme</span>
-                <select class="form-select form-select-sm theme-select" value="@_selectedTheme" @onchange="OnThemeChanged">
-                    @foreach (var theme in ThemeService.Themes)
-                    {
-                        <option value="@theme.Key">@theme.Value</option>
-                    }
-                </select>
-
-                <span class="port-label">Port</span>
-                <select class="form-select form-select-sm port-select"
-                        @bind="_selectedPort"
-                        disabled="@Mesh.IsConnected">
-                    <option value="">-- Select port --</option>
-                    @foreach (var port in Mesh.AvailablePorts)
-                    {
-                        <option value="@port">@port</option>
-                    }
-                </select>
-
-                <button class="btn btn-sm btn-outline-secondary"
-                        @onclick="RefreshPorts"
-                        disabled="@Mesh.IsConnected"
-                        title="Refresh ports">
-                    &#8635;
-                </button>
-
-                @if (!Mesh.IsConnected)
+                @if (!string.IsNullOrEmpty(_error))
                 {
-                    <button class="btn btn-sm btn-success"
-                            @onclick="Connect"
-                            disabled="@(string.IsNullOrEmpty(_selectedPort) || _busy)">
-                        @if (_busy) { <span>Connecting...</span> } else { <span>Connect</span> }
-                    </button>
-                }
-                else
-                {
-                    <button class="btn btn-sm btn-danger"
-                            @onclick="Disconnect"
-                            disabled="@_busy">
-                        Disconnect
-                    </button>
-                }
-
-                @if (Mesh.IsConnected && OwnBattery is > 0 and var bat)
-                {
-                    <div class="battery-indicator" style="color: @BatteryColor(bat)" title="Battery: @bat%">
-                        <span class="battery-icon">
-                            <span class="battery-fill" style="width: @bat%"></span>
-                        </span>
-                        <span class="battery-pct">@bat%</span>
-                    </div>
+                    <span class="text-danger ms-2 small">@_error</span>
                 }
             </div>
-
-            @if (!string.IsNullOrEmpty(_error))
-            {
-                <span class="text-danger ms-2 small">@_error</span>
-            }
         </div>
+    </div>
 
-        <article class="content px-4">
+    <!-- Body Section -->
+    <div class="layout-body">
+        <div class="sidebar">
+            <NavMenu />
+        </div>
+        <article class="content">
             @Body
         </article>
-    </main>
+    </div>
 </div>
 
 <div id="blazor-error-ui" data-nosnippet>
@@ -117,7 +127,7 @@
 
     private static string BatteryColor(uint pct) => pct switch
     {
-        >= 60 => "var(--mesh-bright)",
+        >= 60 => "var(--mesh-primary-light)",
         >= 30 => "var(--mesh-warning)",
         _     => "var(--mesh-danger)"
     };

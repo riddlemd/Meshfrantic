@@ -1,0 +1,67 @@
+/* ── Navigation Menu ───────────────────────────────────────────────── */
+.nav-menu__toggle {
+    display: none;
+}
+
+.nav-menu__label {
+    display: none;
+    padding: 0.75rem 1rem;
+    color: var(--mesh-primary);
+    cursor: pointer;
+    font-family: $font-monospace;
+    font-weight: bold;
+    border-bottom: 1px solid var(--mesh-border-color);
+    transition: all $transition-normal;
+
+    &:hover {
+        background-color: var(--mesh-secondary);
+        color: var(--mesh-primary-light);
+    }
+}
+
+.nav-menu {
+    display: flex;
+    flex-direction: column;
+    padding: 0.5rem 0;
+}
+
+.nav-link {
+    color: var(--mesh-primary);
+    padding: 0.6rem 1rem;
+    text-decoration: none;
+    border-left: 2px solid transparent;
+    transition: background-color $transition-fast, color $transition-fast;
+    font-size: 0.95rem;
+    font-family: $font-monospace;
+
+    &:hover {
+        background-color: var(--mesh-secondary);
+        color: var(--mesh-primary-light);
+        border-left-color: var(--mesh-primary);
+    }
+
+    &.active {
+        background-color: var(--mesh-secondary);
+        color: var(--mesh-primary-light);
+        border-left-color: var(--mesh-primary-light);
+        font-weight: bold;
+    }
+}
+
+@media (max-width: 640px) {
+    .nav-menu__toggle {
+        display: none;
+    }
+
+    .nav-menu__label {
+        display: block;
+    }
+
+    .nav-menu {
+        display: none;
+    }
+
+    .nav-menu__toggle:checked ~ .nav-menu {
+        display: flex;
+    }
+}

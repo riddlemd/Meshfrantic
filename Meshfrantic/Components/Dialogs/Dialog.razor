@@ -1,0 +1,45 @@
+@rendermode InteractiveServer
+
+@if (IsOpen)
+{
+    <div class="overlay" onclick="OnOverlayClickAsync">
+        <dialog  class="dialog @Class">
+            <div class="dialog__content">
+                <div class="dialog__header">
+                    <span>@Header</span>
+                    <button class="btn btn--close"><i class="bi bi-x-lg" @onclick="CloseAsync" title="Close"></i></button>
+                </div>
+                <div class="dialog__body">
+                    @Body
+                </div>
+                <div class="dialog__footer">
+                    @Footer
+                </div>
+            </div>
+        </dialog>
+    </div>
+}
+
+@code {
+    [Parameter] public RenderFragment? Header { get; set; }
+    [Parameter] public RenderFragment? Body { get; set; }
+    [Parameter] public RenderFragment? Footer { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public bool CloseOnOverlayClick { get; set; }
+    [Parameter] public bool IsOpen { get; set; }
+
+    public async Task CloseAsync()
+    {
+        IsOpen = false;
+
+        await OnClose.InvokeAsync();
+    }
+
+    public async Task OnOverlayClickAsync()
+    {
+        if (!CloseOnOverlayClick) return;
+
+        await CloseAsync();
+    }
+}

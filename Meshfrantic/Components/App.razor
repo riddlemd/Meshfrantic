@@ -7,8 +7,8 @@
     <base href="/" />
     <ResourcePreloader />
     <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]" />
-    <link rel="stylesheet" href="@Assets["app.css"]" />
-    <link id="theme-stylesheet" rel="stylesheet" href="/css/theme/terminal-green.css" />
+    <link rel="stylesheet" href="@Assets["css/main.css"]" />
+    <link class="app__theme-stylesheet" rel="stylesheet" href="/css/theme/terminal-green.css" />
     <link rel="stylesheet" href="@Assets["Meshfrantic.styles.css"]" />
     <ImportMap />
     <link rel="icon" type="image/png" href="favicon.png" />
@@ -20,13 +20,15 @@
     <ReconnectModal />
     <script src="@Assets["_framework/blazor.web.js"]"></script>
     <script>
-        window.scrollToBottom = (elementId) => {
-            const el = document.getElementById(elementId);
-            if (el) el.scrollTop = el.scrollHeight;
+        console.log('App.razor scripts loading');
+        window.testFunction = function() {
+            alert('Inline JS Interop is working!');
         };
-
+    </script>
+    <script src="/js/app.js"></script>
+    <script>
         window.setTheme = (themeName) => {
-            const link = document.getElementById('theme-stylesheet');
+            const link = document.querySelector('.app__theme-stylesheet');
             if (link) {
                 link.href = `/css/theme/${themeName}.css`;
                 localStorage.setItem('meshfrantic-theme', themeName);
@@ -40,7 +42,7 @@
         // Apply saved theme on load
         (function() {
             const theme = localStorage.getItem('meshfrantic-theme') || 'terminal-green';
-            const link = document.getElementById('theme-stylesheet');
+            const link = document.querySelector('.app__theme-stylesheet');
             if (link) {
                 link.href = `/css/theme/${theme}.css`;
             }

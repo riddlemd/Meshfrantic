@@ -32,6 +32,9 @@ public class MeshtasticService : IDisposable
     public void RefreshPorts()
     {
         AvailablePorts = SerialConnection.ListPorts().ToList();
+        _logger.LogDebug("Refreshed available ports: {PortCount} ports found", AvailablePorts.Count);
+        if (AvailablePorts.Count > 0)
+            _logger.LogDebug("Available ports: {Ports}", string.Join(", ", AvailablePorts));
         StateChanged?.Invoke();
     }
 
@@ -105,6 +108,9 @@ public class MeshtasticService : IDisposable
             await _connection.WriteToRadio(toRadio);
 
             var ownNodeNum = Container.MyNodeInfo?.MyNodeNum ?? 0;
+            _logger.LogInformation("Message sent from node {NodeId} to {DestNode}: {MessageLength} bytes",
+                ownNodeNum, destNodeId ?? 0, text.Length);
+
             _messages.Add(new ChatMessage
             {
                 Text = text,
@@ -114,6 +120,11 @@ public class MeshtasticService : IDisposable
             });
 
             StateChanged?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send message to node {DestNode}", destNodeId ?? 0);
+            throw;
         }
         finally
         {
@@ -126,6 +137,7 @@ public class MeshtasticService : IDisposable
         if (_connection == null || !IsConnected)
             throw new InvalidOperationException("Not connected to a device");
 
+        _logger.LogWarning("Device reboot requested with {DelaySeconds}s delay", delaySeconds);
         var factory = new AdminMessageFactory(Container);
         var packet = factory.CreateRebootMessage(delaySeconds, isOta: false);
         var toRadio = _connection.ToRadioFactory.CreateMeshPacketMessage(packet);
@@ -137,6 +149,7 @@ public class MeshtasticService : IDisposable
         if (_connection == null || !IsConnected)
             throw new InvalidOperationException("Not connected to a device");
 
+        _logger.LogWarning("Device factory reset requested");
         var factory = new AdminMessageFactory(Container);
         var packet = factory.CreateFactoryResetMessage();
         var toRadio = _connection.ToRadioFactory.CreateMeshPacketMessage(packet);
@@ -148,6 +161,7 @@ public class MeshtasticService : IDisposable
         if (_connection == null || !IsConnected)
             throw new InvalidOperationException("Not connected to a device");
 
+        _logger.LogWarning("Device node database reset requested");
         var factory = new AdminMessageFactory(Container);
         var packet = factory.CreateNodeDbResetMessage();
         var toRadio = _connection.ToRadioFactory.CreateMeshPacketMessage(packet);
@@ -159,13 +173,12 @@ public class MeshtasticService : IDisposable
         if (_connection == null || !IsConnected)
             throw new InvalidOperationException("Not connected to a device");
 
+        _logger.LogInformation("Removing node {NodeId}", nodeNum);
         var factory = new AdminMessageFactory(Container);
         var packet = factory.CreateRemoveByNodenumMessage(nodeNum);
         var toRadio = _connection.ToRadioFactory.CreateMeshPacketMessage(packet);
         await _connection.WriteToRadio(toRadio);
 
-        // Remove from local state immediately — the device has removed it from its DB
-        // and won't send a packet to confirm, so we update the UI ourselves.
         Container.Nodes.RemoveAll(n => n.Num == nodeNum);
         StateChanged?.Invoke();
     }
@@ -184,6 +197,7 @@ public class MeshtasticService : IDisposable
         if (_connection == null || !IsConnected)
             throw new InvalidOperationException("Not connected to a device");
 
+        _logger.LogInformation("Setting device owner: {LongName} ({ShortName})", longName, shortName);
         var factory = new AdminMessageFactory(Container);
         var user = new User { LongName = longName, ShortName = shortName };
         var packet = factory.CreateSetOwnerMessage(user);
@@ -245,6 +259,9 @@ public class MeshtasticService : IDisposable
         var fromNodeId = packet.From;
         var nodeName = Container.GetNodeDisplayName(fromNodeId);
         var ownNodeNum = Container.MyNodeInfo?.MyNodeNum ?? 0;
+
+        _logger.LogDebug("Message received from node {FromNodeId} ({NodeName}): {MessageLength} bytes",
+            fromNodeId, nodeName, text.Length);
 
         _messages.Add(new ChatMessage
         {

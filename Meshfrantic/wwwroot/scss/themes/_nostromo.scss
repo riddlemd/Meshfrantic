@@ -1,0 +1,22 @@
+// Nostromo Theme - Alien/Aliens inspired
+// Aged terminal amber + xenomorph acid green aesthetic
+
+:root {
+  --mesh-primary: #b89c50;
+  --mesh-primary-light: #b8e040;
+  --mesh-secondary: #6a5828;
+  --mesh-tertiary: #8a7235;
+  --mesh-border-color: #403a20;
+  --mesh-accent: #b89c50;
+  --mesh-background: #080805;
+  --mesh-text-color: #b89c50;
+  --mesh-danger: #c8f020;
+  --mesh-warning: #e06a10;
+  --mesh-black: #000000;
+}
+
+html,
+body {
+  background: var(--mesh-background);
+  color: var(--mesh-text-color);
+}

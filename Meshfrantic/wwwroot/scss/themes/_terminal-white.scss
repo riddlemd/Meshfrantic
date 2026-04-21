@@ -1,0 +1,22 @@
+// Terminal White Theme - Classic white phosphor on black
+// Retro CRT terminal aesthetic with crisp white text
+
+:root {
+  --mesh-primary: #cccccc;
+  --mesh-primary-light: #ffffff;
+  --mesh-secondary: #666666;
+  --mesh-tertiary: #888888;
+  --mesh-border-color: #444444;
+  --mesh-accent: #cccccc;
+  --mesh-background: #000000;
+  --mesh-text-color: #cccccc;
+  --mesh-danger: #ff9999;
+  --mesh-warning: #ffee88;
+  --mesh-black: #000000;
+}
+
+html,
+body {
+  background: var(--mesh-background);
+  color: var(--mesh-text-color);
+}

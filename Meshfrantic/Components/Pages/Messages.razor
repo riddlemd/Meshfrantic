@@ -5,6 +5,7 @@
 
 <PageTitle>Meshfrantic — Messages</PageTitle>
 
+<div class="px-4">
 <h2 class="mb-3">Messages</h2>
 
 @if (!Mesh.IsConnected)
@@ -14,7 +15,7 @@
 else
 {
     <div class="chat-container d-flex flex-column">
-        <div class="chat-messages flex-grow-1" id="chat-scroll">
+        <div class="chat-messages flex-grow-1 messages__scroll">
             @if (!Mesh.Messages.Any())
             {
                 <div class="text-center text-muted py-5">No messages yet. Send one below!</div>
@@ -58,6 +59,7 @@ else
         }
     </div>
 }
+</div>
 
 @code {
     private string _draft = string.Empty;
@@ -68,7 +70,7 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await JS.InvokeVoidAsync("scrollToBottom", "chat-scroll");
+        await JS.InvokeVoidAsync("scrollToBottom", "messages__scroll");
     }
 
     private void OnStateChanged() => InvokeAsync(StateHasChanged);

@@ -1,11 +1,11 @@
-<input type="checkbox" id="nav-toggle" class="nav-toggle" />
-<label for="nav-toggle" class="nav-toggle-label">☰ MENU</label>
+<input type="checkbox" id="nav-menu__toggle" class="nav-menu__toggle" />
+<label for="nav-menu__toggle" class="nav-menu__label">☰ MENU</label>
 
-<div class="nav-header">://MESHFRANTIC</div>
-
-<nav class="nav-menu" onclick="document.getElementById('nav-toggle').checked = false">
+<nav class="nav-menu" onclick="document.querySelector('.nav-menu__toggle').checked = false">
     <NavLink class="nav-link" href="" Match="NavLinkMatch.All">Dashboard</NavLink>
     <NavLink class="nav-link" href="messages">Messages</NavLink>
     <NavLink class="nav-link" href="nodes">Nodes</NavLink>
+    <NavLink class="nav-link" href="map">Map</NavLink>
     <NavLink class="nav-link" href="commands">Commands</NavLink>
+    <NavLink class="nav-link" href="logs">Logs</NavLink>
 </nav>

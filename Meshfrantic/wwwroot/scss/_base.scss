@@ -1,0 +1,250 @@
+/* ── Base Styles ────────────────────────────────────────────────────── */
+html, body {
+    font-family: $font-monospace;
+    background: var(--mesh-background);
+    color: var(--mesh-text-color);
+    height: 100%;
+}
+
+a, .btn-link {
+    color: var(--mesh-primary);
+    transition: color $transition-fast;
+
+    &:hover {
+        color: var(--mesh-primary-light);
+    }
+}
+
+h1, h2, h3 {
+    color: var(--mesh-primary-light);
+}
+
+hr {
+    border-color: var(--mesh-border-color);
+}
+
+/* ── Navbar / Sidebar ─────────────────────────────────────────────── */
+.navbar-brand {
+    color: var(--mesh-primary) !important;
+    font-weight: 700;
+    font-size: 1.1rem;
+    letter-spacing: 0.02em;
+}
+
+.nav-logo {
+    color: var(--mesh-primary);
+    margin-right: 0.3rem;
+}
+
+.navbar-toggler {
+    border-color: var(--mesh-border-color) !important;
+}
+
+.nav-scrollable {
+    background: var(--mesh-background);
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────── */
+.btn {
+    border-radius: 0;
+}
+
+.btn-primary {
+    background: transparent !important;
+    border-color: var(--mesh-primary) !important;
+    color: var(--mesh-primary) !important;
+    font-weight: 600;
+    border-radius: 0;
+    font-family: $font-monospace;
+    transition: all $transition-fast;
+
+    &:hover {
+        background: var(--mesh-primary) !important;
+        border-color: var(--mesh-primary) !important;
+        color: var(--mesh-background) !important;
+    }
+}
+
+.btn-success {
+    background: transparent !important;
+    border-color: var(--mesh-primary) !important;
+    color: var(--mesh-primary) !important;
+    border-radius: 0;
+    font-family: $font-monospace;
+    transition: all $transition-fast;
+
+    &:hover {
+        background: var(--mesh-primary) !important;
+        color: var(--mesh-background) !important;
+    }
+}
+
+.btn-danger {
+    background: transparent !important;
+    border-color: var(--mesh-danger) !important;
+    color: var(--mesh-danger) !important;
+    border-radius: 0;
+    font-family: $font-monospace;
+    transition: all $transition-fast;
+
+    &:hover {
+        background: var(--mesh-danger) !important;
+        color: var(--mesh-background) !important;
+    }
+}
+
+.btn-outline-primary {
+    color: var(--mesh-primary) !important;
+    border-color: var(--mesh-primary) !important;
+    border-radius: 0;
+    transition: all $transition-fast;
+
+    &:hover {
+        background: var(--mesh-primary) !important;
+        color: var(--mesh-background) !important;
+    }
+}
+
+.btn-outline-secondary {
+    color: var(--mesh-secondary) !important;
+    border-color: var(--mesh-border-color) !important;
+    border-radius: 0;
+    transition: all $transition-fast;
+
+    &:hover {
+        background: var(--mesh-border-color) !important;
+        color: var(--mesh-primary-light) !important;
+    }
+}
+
+.btn--delete {
+    background: transparent !important;
+    border-color: var(--mesh-danger) !important;
+    color: var(--mesh-danger) !important;
+    border-radius: 0;
+    font-family: $font-monospace;
+    transition: all $transition-fast;
+
+    &:hover {
+        background: var(--mesh-danger) !important;
+        color: var(--mesh-background) !important;
+    }
+}
+
+/* ── Cards ────────────────────────────────────────────────────────── */
+.card {
+    background: var(--mesh-background);
+    border: 1px solid var(--mesh-border-color);
+    border-radius: 0;
+
+    &__header {
+        background: var(--mesh-secondary);
+        border-bottom: 1px solid var(--mesh-border-color);
+        padding: 0.75rem 1rem;
+    }
+
+    &__body {
+        padding: 1rem;
+    }
+}
+
+/* ── Forms ────────────────────────────────────────────────────────── */
+.form-control,
+.form-select {
+    background: var(--mesh-background);
+    color: var(--mesh-primary);
+    border-color: var(--mesh-border-color);
+    border-radius: 0;
+    font-family: $font-monospace;
+    transition: border-color $transition-fast;
+
+    &:focus {
+        background: var(--mesh-background);
+        color: var(--mesh-primary);
+        border-color: var(--mesh-primary-light);
+        box-shadow: none;
+    }
+
+    &:disabled {
+        background: var(--mesh-background);
+        color: var(--mesh-secondary);
+        border-color: var(--mesh-border-color);
+        opacity: 1;
+    }
+}
+
+.form-label {
+    color: var(--mesh-secondary);
+    font-size: 0.875rem;
+}
+
+.form-text {
+    color: var(--mesh-secondary);
+}
+
+/* ── Alerts ───────────────────────────────────────────────────────── */
+.alert-info {
+    background: transparent;
+    border: 1px solid var(--mesh-border-color);
+    color: var(--mesh-primary);
+}
+
+.alert-secondary {
+    background: transparent;
+    border: 1px solid var(--mesh-border-color);
+    color: var(--mesh-secondary);
+}
+
+/* ── Badges ───────────────────────────────────────────────────────── */
+.badge {
+    font-size: 0.7rem;
+    border-radius: 0;
+}
+
+.bg-primary {
+    background: transparent !important;
+    color: var(--mesh-primary) !important;
+    border: 1px solid var(--mesh-border-color);
+}
+
+/* ── Scrollbar ────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--mesh-background);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--mesh-border-color);
+    border-radius: 0;
+    transition: background $transition-fast;
+
+    &:hover {
+        background: var(--mesh-primary);
+    }
+}
+
+/* ── Error UI ─────────────────────────────────────────────────────── */
+.blazor-error-boundary {
+    background: #330000;
+    border: 1px solid var(--mesh-danger);
+    border-radius: 0;
+    padding: 1rem 1rem 1rem 3.5rem;
+    color: var(--mesh-danger);
+
+    &::after {
+        content: "An error has occurred. Please reload the page.";
+    }
+}
+
+#blazor-error-ui {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 1em;
+    text-align: right;
+}

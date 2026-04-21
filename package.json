@@ -1,0 +1,12 @@
+{
+  "name": "meshfrantic",
+  "version": "1.0.0",
+  "description": "Blazor Server app for Meshtastic USB device control",
+  "scripts": {
+    "sass": "sass --watch Meshfrantic/wwwroot/scss:Meshfrantic/wwwroot/css --style expanded",
+    "sass:build": "sass Meshfrantic/wwwroot/scss:Meshfrantic/wwwroot/css --style compressed"
+  },
+  "devDependencies": {
+    "sass": "^1.80.0"
+  }
+}

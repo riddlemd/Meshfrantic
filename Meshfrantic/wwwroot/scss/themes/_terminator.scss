@@ -1,0 +1,22 @@
+// Terminator Theme - T-800 HUD aesthetic
+// Red phosphor on pure black, mimicking endoskeleton targeting display
+
+:root {
+  --mesh-primary: #cc2200;
+  --mesh-primary-light: #ff3300;
+  --mesh-secondary: #7a1400;
+  --mesh-tertiary: #a81c00;
+  --mesh-border-color: #5c1000;
+  --mesh-accent: #cc2200;
+  --mesh-background: #000000;
+  --mesh-text-color: #cc2200;
+  --mesh-danger: #ff6600;
+  --mesh-warning: #ff9900;
+  --mesh-black: #000000;
+}
+
+html,
+body {
+  background: var(--mesh-background);
+  color: var(--mesh-text-color);
+}

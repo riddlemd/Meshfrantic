@@ -1,0 +1,22 @@
+// Terminal Amber Theme - Warm amber phosphor on black
+// Retro CRT terminal aesthetic with golden amber text
+
+:root {
+  --mesh-primary: #d4a02a;
+  --mesh-primary-light: #ffcc00;
+  --mesh-secondary: #8a6a1a;
+  --mesh-tertiary: #b08820;
+  --mesh-border-color: #6a5a1a;
+  --mesh-accent: #d4a02a;
+  --mesh-background: #000000;
+  --mesh-text-color: #d4a02a;
+  --mesh-danger: #ff8888;
+  --mesh-warning: #ffdd66;
+  --mesh-black: #000000;
+}
+
+html,
+body {
+  background: var(--mesh-background);
+  color: var(--mesh-text-color);
+}

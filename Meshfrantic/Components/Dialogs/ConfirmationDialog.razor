@@ -1,0 +1,46 @@
+@rendermode InteractiveServer
+
+<Dialog IsOpen="IsOpen" Class="@($"dialog--confirmation {Class}")" OnClose="OnClose">
+    <Header>
+        @if (!string.IsNullOrEmpty(Title))
+        {
+            <h2>@Title</h2>
+        }
+    </Header>
+    <Body>@ChildContent</Body>
+    <Footer>
+        <div class="dialog__buttons">
+            <button class="btn btn--secondary btn--cancel" @onclick="HandleCancel">@CancelText</button>
+            <button class="btn btn--primary btn--@GetConfirmClassName(ConfirmText)" @onclick="HandleConfirm">@ConfirmText</button>
+        </div>
+    </Footer>
+</Dialog>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Title { get; set; } = "Are you sure?";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string ConfirmText { get; set; } = "Confirm";
+    [Parameter] public string CancelText { get; set; } = "Cancel";
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private async Task HandleConfirm()
+    {
+        await OnConfirm.InvokeAsync();
+        
+        IsOpen = false;
+    }
+    private async Task HandleCancel(MouseEventArgs args)
+    {
+        await OnCancel.InvokeAsync();
+
+        IsOpen = false;
+    }
+
+    private static string GetConfirmClassName(string text)
+        => JsonNamingPolicy.KebabCaseLower.ConvertName(text);
+
+}

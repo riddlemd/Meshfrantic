@@ -1,0 +1,233 @@
+@page "/logs"
+@using Meshfrantic.Components.Dialogs
+@rendermode InteractiveServer
+@implements IDisposable
+
+<PageTitle>Logs</PageTitle>
+
+<div class="logs-page">
+    <div class="logs-page__sidebar">
+        <h2>Log Files</h2>
+        <div class="logs-page__file-list">
+            @if (_logFiles.Count == 0)
+            {
+                <p class="text-muted">No log files found</p>
+            }
+            else
+            {
+                @foreach (var file in _logFiles)
+                {
+                    var relativePath = GetRelativeLogPath(file.FullName);
+                    var isSelected = _selectedFile == relativePath;
+                    <div class="logs-page__file-item @(isSelected ? "logs-page__file-item--active" : "")"
+                         @onclick="@(() => SelectFileAsync(relativePath))">
+                        <div class="logs-page__file-item-name">@relativePath</div>
+                        <div class="logs-page__file-item-size">@FormatBytes(file.Length)</div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+
+    <div class="logs-page__panel">
+        @if (string.IsNullOrEmpty(_selectedFile))
+        {
+            <div class="logs-page__empty">
+                <p>Select a log file to view</p>
+            </div>
+        }
+        else
+        {
+            <div class="logs-page__header">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2>@_selectedFile @(_selectedFileLastWriteTime.HasValue ? $"({_selectedFileLastWriteTime:yyyy-MM-dd HH:mm:ss})" : "")</h2>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-sm btn-danger"
+                                @onclick="OpenDeleteLogDialogAsync">
+                            × Delete
+                        </button>
+                        <button class="btn btn-sm @(_isAutoScroll ? "btn-primary" : "btn-outline-secondary")"
+                                @onclick="ToggleAutoScrollAsync">
+                            @(_isAutoScroll ? "↓ Auto-Scroll ON" : "↓ Auto-Scroll OFF")
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="logs-page__content">
+                <pre>@_logContent</pre>
+            </div>
+        }
+    </div>
+</div>
+
+<ConfirmationDialog
+    IsOpen="@_deleteLogIsOpen"
+    Title="Delete Log File?"
+    ConfirmText="Delete"
+    OnConfirm="OnDeleteLogConfirmAsync"
+    OnCancel="OnDeleteLogCancelAsync"
+                    OnClose="() => { _deleteLogIsOpen = false; }">
+    Are you sure you want to delete <strong>@_deleteLogFileName</strong>? This action cannot be undone.
+</ConfirmationDialog>
+
+@code {
+    [Inject] private LogsService? LogsService { get; set; }
+    [Inject] private IJSRuntime? JS { get; set; }
+
+    private List<FileInfo> _logFiles = [];
+    private string? _selectedFile;
+    private string _logContent = "";
+    private DateTime? _selectedFileLastWriteTime;
+    private bool _isAutoScroll = true;
+    private bool _deleteLogIsOpen;
+    private string? _deleteLogFileName;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (LogsService is null) return;
+
+        _logFiles = LogsService.GetLogFiles();
+
+        LogsService.LogsChanged += OnLogsChanged;
+        LogsService.LogFileUpdated += OnLogFileUpdated;
+    }
+
+    private void OnLogsChanged()
+    {
+        _logFiles = LogsService?.GetLogFiles() ?? [];
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnLogFileUpdated(string fileName)
+    {
+        if (LogsService is null) return;
+
+        var relativePath = GetRelativeLogPath(fileName);
+        var file = _logFiles.FirstOrDefault(f => GetRelativeLogPath(f.FullName) == relativePath);
+
+        if (file != null && relativePath == _selectedFile)
+        {
+            var updatedFile = new FileInfo(fileName);
+            var index = _logFiles.IndexOf(file);
+
+            _logFiles[index] = updatedFile;
+
+            _ = InvokeAsync(async () =>
+            {
+                _logContent = await LogsService.ReadLogFileAsync(fileName);
+
+                await InvokeAsync(StateHasChanged);
+
+                if (_isAutoScroll)
+                {
+                    await ScrollToBottom();
+                }
+            });
+        }
+    }
+
+    private async Task SelectFileAsync(string fileName)
+    {
+        if (LogsService is null) return;
+
+        _selectedFile = fileName;
+
+        var file = _logFiles.FirstOrDefault(f => GetRelativeLogPath(f.FullName) == fileName);
+
+        _selectedFileLastWriteTime = file?.LastWriteTimeUtc;
+        _logContent = await LogsService.ReadLogFileAsync(fileName);
+
+        await InvokeAsync(StateHasChanged);
+
+        if (_isAutoScroll)
+        {
+            await Task.Delay(50);
+            await ScrollToBottom();
+        }
+    }
+
+    private async Task ToggleAutoScrollAsync()
+    {
+        _isAutoScroll = !_isAutoScroll;
+
+        await InvokeAsync(StateHasChanged);
+
+        if (_isAutoScroll && !string.IsNullOrEmpty(_selectedFile))
+        {
+            await ScrollToBottom();
+        }
+    }
+
+    private async Task OpenDeleteLogDialogAsync()
+    {
+        if (string.IsNullOrEmpty(_selectedFile)) return;
+
+        _deleteLogFileName = _selectedFile;
+        _deleteLogIsOpen = true;
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnDeleteLogConfirmAsync()
+    {
+        if (LogsService is null || string.IsNullOrEmpty(_deleteLogFileName)) return;
+
+        try
+        {
+            await LogsService.DeleteLogFileAsync(_deleteLogFileName);
+            _selectedFile = null;
+            _logContent = "";
+            _deleteLogFileName = null;
+            _deleteLogIsOpen = false;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error deleting log file: {ex.Message}");
+        }
+    }
+
+    private Task OnDeleteLogCancelAsync()
+    {
+        _deleteLogFileName = null;
+        _deleteLogIsOpen = false;
+
+        return Task.CompletedTask;
+    }
+
+    private async Task ScrollToBottom()
+    {
+        if (JS is null) return;
+
+        try
+        {
+            await JS.InvokeVoidAsync("scrollToBottom", "logs-page__content");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error scrolling to bottom: {ex.Message}");
+        }
+    }
+
+    private string FormatBytes(long bytes)
+    {
+        return bytes switch
+        {
+            < 1024 => $"{bytes} B",
+            < 1024 * 1024 => $"{bytes / 1024.0:F1} KB",
+            _ => $"{bytes / (1024.0 * 1024):F1} MB"
+        };
+    }
+
+    private string GetRelativeLogPath(string fullPath)
+    {
+        var logsDir = Path.Combine(AppContext.BaseDirectory, "logs");
+        return Path.GetRelativePath(logsDir, fullPath);
+    }
+
+    void IDisposable.Dispose()
+    {
+        LogsService?.LogsChanged -= OnLogsChanged;
+        LogsService?.LogFileUpdated -= OnLogFileUpdated;
+    }
+}

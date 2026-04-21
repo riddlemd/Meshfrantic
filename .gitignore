@@ -185,3 +185,8 @@ FodyWeavers.xsd
 
 # Local Settings
 *.local.json
+
+# Node/npm
+node_modules/
+package-lock.json
+pnpm-lock.yaml

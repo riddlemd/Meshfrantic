@@ -1,0 +1,32 @@
+@implements IDisposable
+
+<div class="current-date-time">
+    @_currentDateTime.ToString("yyyy-MM-dd HH:mm:ss")
+</div>
+
+@code {
+    private DateTime _currentDateTime = DateTime.Now;
+    private System.Timers.Timer? _timer;
+
+    protected override void OnInitialized()
+    {
+        _currentDateTime = DateTime.Now;
+
+        _timer = new System.Timers.Timer(1000);
+        _timer.Elapsed += OnTimerElapsed;
+        _timer.AutoReset = true;
+        _timer.Start();
+    }
+
+    private void OnTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
+    {
+        _currentDateTime = DateTime.Now;
+        InvokeAsync(StateHasChanged);
+    }
+
+    void IDisposable.Dispose()
+    {
+        _timer?.Stop();
+        _timer?.Dispose();
+    }
+}

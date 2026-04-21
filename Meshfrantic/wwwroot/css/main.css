@@ -1,0 +1,1265 @@
+@charset "UTF-8";
+/* ── Meshfrantic SCSS Main Entry Point ────────────────────────────── */
+/* ── Color Variables ────────────────────────────────────────────────── */
+:root {
+  --mesh-primary: #00c170;
+  --mesh-primary-light: #00ff9d;
+  --mesh-secondary: #007a45;
+  --mesh-tertiary: #004d2b;
+  --mesh-border-color: #005c35;
+  --mesh-background: #000000;
+  --mesh-text-color: #00c170;
+  --mesh-danger: #d4543c;
+  --mesh-warning: #ffc107;
+  --sidebar-width: 250px;
+}
+
+/* ── SCSS Color Map ────────────────────────────────────────────────── */
+/* ── Font Families ────────────────────────────────────────────────── */
+/* ── Spacing ──────────────────────────────────────────────────────── */
+/* ── Transitions ──────────────────────────────────────────────────── */
+/* ── Sizing ───────────────────────────────────────────────────────── */
+/* ── Base Styles ────────────────────────────────────────────────────── */
+html, body {
+  font-family: "Courier New", Courier, monospace;
+  background: var(--mesh-background);
+  color: var(--mesh-text-color);
+  height: 100%;
+}
+
+a, .btn-link {
+  color: var(--mesh-primary);
+  transition: color 0.15s;
+}
+a:hover, .btn-link:hover {
+  color: var(--mesh-primary-light);
+}
+
+h1, h2, h3 {
+  color: var(--mesh-primary-light);
+}
+
+hr {
+  border-color: var(--mesh-border-color);
+}
+
+/* ── Navbar / Sidebar ─────────────────────────────────────────────── */
+.navbar-brand {
+  color: var(--mesh-primary) !important;
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: 0.02em;
+}
+
+.nav-logo {
+  color: var(--mesh-primary);
+  margin-right: 0.3rem;
+}
+
+.navbar-toggler {
+  border-color: var(--mesh-border-color) !important;
+}
+
+.nav-scrollable {
+  background: var(--mesh-background);
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────── */
+.btn {
+  border-radius: 0;
+}
+
+.btn-primary {
+  background: transparent !important;
+  border-color: var(--mesh-primary) !important;
+  color: var(--mesh-primary) !important;
+  font-weight: 600;
+  border-radius: 0;
+  font-family: "Courier New", Courier, monospace;
+  transition: all 0.15s;
+}
+.btn-primary:hover {
+  background: var(--mesh-primary) !important;
+  border-color: var(--mesh-primary) !important;
+  color: var(--mesh-background) !important;
+}
+
+.btn-success {
+  background: transparent !important;
+  border-color: var(--mesh-primary) !important;
+  color: var(--mesh-primary) !important;
+  border-radius: 0;
+  font-family: "Courier New", Courier, monospace;
+  transition: all 0.15s;
+}
+.btn-success:hover {
+  background: var(--mesh-primary) !important;
+  color: var(--mesh-background) !important;
+}
+
+.btn-danger {
+  background: transparent !important;
+  border-color: var(--mesh-danger) !important;
+  color: var(--mesh-danger) !important;
+  border-radius: 0;
+  font-family: "Courier New", Courier, monospace;
+  transition: all 0.15s;
+}
+.btn-danger:hover {
+  background: var(--mesh-danger) !important;
+  color: var(--mesh-background) !important;
+}
+
+.btn-outline-primary {
+  color: var(--mesh-primary) !important;
+  border-color: var(--mesh-primary) !important;
+  border-radius: 0;
+  transition: all 0.15s;
+}
+.btn-outline-primary:hover {
+  background: var(--mesh-primary) !important;
+  color: var(--mesh-background) !important;
+}
+
+.btn-outline-secondary {
+  color: var(--mesh-secondary) !important;
+  border-color: var(--mesh-border-color) !important;
+  border-radius: 0;
+  transition: all 0.15s;
+}
+.btn-outline-secondary:hover {
+  background: var(--mesh-border-color) !important;
+  color: var(--mesh-primary-light) !important;
+}
+
+.btn--delete {
+  background: transparent !important;
+  border-color: var(--mesh-danger) !important;
+  color: var(--mesh-danger) !important;
+  border-radius: 0;
+  font-family: "Courier New", Courier, monospace;
+  transition: all 0.15s;
+}
+.btn--delete:hover {
+  background: var(--mesh-danger) !important;
+  color: var(--mesh-background) !important;
+}
+
+/* ── Cards ────────────────────────────────────────────────────────── */
+.card {
+  background: var(--mesh-background);
+  border: 1px solid var(--mesh-border-color);
+  border-radius: 0;
+}
+.card__header {
+  background: var(--mesh-secondary);
+  border-bottom: 1px solid var(--mesh-border-color);
+  padding: 0.75rem 1rem;
+}
+.card__body {
+  padding: 1rem;
+}
+
+/* ── Forms ────────────────────────────────────────────────────────── */
+.form-control,
+.form-select {
+  background: var(--mesh-background);
+  color: var(--mesh-primary);
+  border-color: var(--mesh-border-color);
+  border-radius: 0;
+  font-family: "Courier New", Courier, monospace;
+  transition: border-color 0.15s;
+}
+.form-control:focus,
+.form-select:focus {
+  background: var(--mesh-background);
+  color: var(--mesh-primary);
+  border-color: var(--mesh-primary-light);
+  box-shadow: none;
+}
+.form-control:disabled,
+.form-select:disabled {
+  background: var(--mesh-background);
+  color: var(--mesh-secondary);
+  border-color: var(--mesh-border-color);
+  opacity: 1;
+}
+
+.form-label {
+  color: var(--mesh-secondary);
+  font-size: 0.875rem;
+}
+
+.form-text {
+  color: var(--mesh-secondary);
+}
+
+/* ── Alerts ───────────────────────────────────────────────────────── */
+.alert-info {
+  background: transparent;
+  border: 1px solid var(--mesh-border-color);
+  color: var(--mesh-primary);
+}
+
+.alert-secondary {
+  background: transparent;
+  border: 1px solid var(--mesh-border-color);
+  color: var(--mesh-secondary);
+}
+
+/* ── Badges ───────────────────────────────────────────────────────── */
+.badge {
+  font-size: 0.7rem;
+  border-radius: 0;
+}
+
+.bg-primary {
+  background: transparent !important;
+  color: var(--mesh-primary) !important;
+  border: 1px solid var(--mesh-border-color);
+}
+
+/* ── Scrollbar ────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--mesh-background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--mesh-border-color);
+  border-radius: 0;
+  transition: background 0.15s;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--mesh-primary);
+}
+
+/* ── Error UI ─────────────────────────────────────────────────────── */
+.blazor-error-boundary {
+  background: #330000;
+  border: 1px solid var(--mesh-danger);
+  border-radius: 0;
+  padding: 1rem 1rem 1rem 3.5rem;
+  color: var(--mesh-danger);
+}
+.blazor-error-boundary::after {
+  content: "An error has occurred. Please reload the page.";
+}
+
+#blazor-error-ui {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 1em;
+  text-align: right;
+}
+
+/* ── Page Layout ────────────────────────────────────────────────────── */
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--mesh-background);
+}
+
+/* ── Header Section ─────────────────────────────────────────────────── */
+.layout-header {
+  display: flex;
+  border-bottom: 1px solid var(--mesh-border-color);
+  background: var(--mesh-background);
+}
+.layout-header .sidebar {
+  width: 250px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--mesh-border-color);
+}
+
+.header {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.logo {
+  padding: 1rem;
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: var(--mesh-primary-light);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border-bottom: 1px solid var(--mesh-border-color);
+}
+
+.connection-bar {
+  padding: 0.5rem 1.5rem;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--mesh-background);
+}
+.connection-bar .current-date-time {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: "Courier New", Courier, monospace;
+  color: var(--mesh-secondary);
+  font-size: 0.85rem;
+}
+
+.connection-bar__left {
+  flex: 0 0 auto;
+}
+
+.connection-bar__right {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ── Body Section ───────────────────────────────────────────────────── */
+.layout-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+.layout-body .sidebar {
+  width: 250px;
+  background: var(--mesh-background);
+  border-right: 1px solid var(--mesh-border-color);
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* ── Battery Indicator ───────────────────────────────────────────── */
+.battery {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-left: 2em;
+  font-size: 0.75rem;
+  font-family: "Courier New", Courier, monospace;
+}
+.battery__icon {
+  position: relative;
+  display: inline-block;
+  width: 22px;
+  height: 10px;
+  border: 2px solid currentColor;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.battery__icon::after {
+  content: "";
+  position: absolute;
+  right: -5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 5px;
+  background: currentColor;
+  border-radius: 0 1px 1px 0;
+}
+.battery__fill {
+  position: absolute;
+  left: 1px;
+  top: 1px;
+  bottom: 1px;
+  max-width: calc(100% - 2px);
+  background: currentColor;
+  transition: width 0.3s ease;
+}
+.battery__percentage {
+  min-width: 2.8em;
+  text-align: center;
+  line-height: 1;
+}
+
+/* ── Port Controls ─────────────────────────────────────────────────── */
+.port-control__label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--mesh-secondary);
+  font-family: "Courier New", Courier, monospace;
+}
+.port-control__select {
+  width: auto;
+  min-width: 140px;
+  max-width: 200px;
+  background: var(--mesh-background);
+  color: var(--mesh-primary);
+  border: 1px solid var(--mesh-border-color);
+  font-family: "Courier New", Courier, monospace;
+  transition: border-color 0.15s;
+}
+.port-control__select:focus {
+  border-color: var(--mesh-primary-light);
+  box-shadow: none;
+}
+
+/* ── Theme Controls ───────────────────────────────────────────────── */
+.theme-control__label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--mesh-secondary);
+  font-family: "Courier New", Courier, monospace;
+}
+.theme-control__select {
+  width: auto;
+  min-width: 80px;
+  background: var(--mesh-background);
+  color: var(--mesh-primary);
+  border: 1px solid var(--mesh-border-color);
+  font-family: "Courier New", Courier, monospace;
+  padding: 0.25rem 0.5rem;
+  margin-right: 2em;
+  transition: border-color 0.15s;
+}
+.theme-control__select:hover {
+  border-color: var(--mesh-primary);
+}
+.theme-control__select:focus {
+  border-color: var(--mesh-primary-light);
+  box-shadow: none;
+}
+
+/* ── Status Badge ──────────────────────────────────────────────────── */
+.status-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 0;
+  font-weight: 500;
+  border: 1px solid;
+  transition: all 0.2s;
+}
+.status-badge--connected {
+  background: transparent;
+  color: var(--mesh-primary);
+  border-color: var(--mesh-border-color);
+}
+.status-badge--connected .status-badge__dot {
+  animation: pulse 2s infinite;
+}
+.status-badge--disconnected {
+  background: transparent;
+  color: var(--mesh-secondary);
+  border-color: var(--mesh-border-color);
+}
+.status-badge__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 0;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+#blazor-error-ui {
+  color-scheme: dark only;
+  background: var(--mesh-tertiary, #330000);
+  color: var(--mesh-danger);
+  bottom: 0;
+  box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+  box-sizing: border-box;
+  display: none;
+  left: 0;
+  padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+  position: fixed;
+  width: 100%;
+  z-index: 1000;
+}
+#blazor-error-ui .dismiss {
+  cursor: pointer;
+  position: absolute;
+  right: 0.75rem;
+  top: 0.5rem;
+}
+
+@media (max-width: 640px) {
+  .layout-header {
+    flex-direction: column;
+  }
+  .layout-header .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--mesh-border-color);
+  }
+  .layout-body {
+    flex-direction: column;
+  }
+  .layout-body .sidebar {
+    width: 100%;
+    max-height: 30%;
+    border-right: none;
+    border-bottom: 1px solid var(--mesh-border-color);
+  }
+  .content {
+    flex: 1;
+  }
+}
+/* ── Navigation Menu ───────────────────────────────────────────────── */
+.nav-menu__toggle {
+  display: none;
+}
+
+.nav-menu__label {
+  display: none;
+  padding: 0.75rem 1rem;
+  color: var(--mesh-primary);
+  cursor: pointer;
+  font-family: "Courier New", Courier, monospace;
+  font-weight: bold;
+  border-bottom: 1px solid var(--mesh-border-color);
+  transition: all 0.2s;
+}
+.nav-menu__label:hover {
+  background-color: var(--mesh-secondary);
+  color: var(--mesh-primary-light);
+}
+
+.nav-menu {
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem 0;
+}
+
+.nav-link {
+  color: var(--mesh-primary);
+  padding: 0.6rem 1rem;
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  transition: background-color 0.15s, color 0.15s;
+  font-size: 0.95rem;
+  font-family: "Courier New", Courier, monospace;
+}
+.nav-link:hover {
+  background-color: var(--mesh-secondary);
+  color: var(--mesh-primary-light);
+  border-left-color: var(--mesh-primary);
+}
+.nav-link.active {
+  background-color: var(--mesh-secondary);
+  color: var(--mesh-primary-light);
+  border-left-color: var(--mesh-primary-light);
+  font-weight: bold;
+}
+
+@media (max-width: 640px) {
+  .nav-menu__toggle {
+    display: none;
+  }
+  .nav-menu__label {
+    display: block;
+  }
+  .nav-menu {
+    display: none;
+  }
+  .nav-menu__toggle:checked ~ .nav-menu {
+    display: flex;
+  }
+}
+/* ── Reconnect Modal ────────────────────────────────────────────────── */
+.components-reconnect-first-attempt-visible,
+.components-reconnect-repeated-attempt-visible,
+.components-reconnect-failed-visible,
+.components-pause-visible,
+.components-resume-failed-visible,
+.components-rejoining-animation {
+  display: none;
+}
+
+#components-reconnect-modal.components-reconnect-show .components-reconnect-first-attempt-visible,
+#components-reconnect-modal.components-reconnect-show .components-reconnect-repeated-attempt-visible,
+#components-reconnect-modal.components-reconnect-show .components-reconnect-failed-visible,
+#components-reconnect-modal.components-reconnect-show .components-pause-visible,
+#components-reconnect-modal.components-reconnect-show .components-resume-failed-visible,
+#components-reconnect-modal.components-reconnect-show .components-rejoining-animation, #components-reconnect-modal.components-reconnect-show .components-reconnect-first-attempt-visible .components-reconnect-first-attempt-visible,
+#components-reconnect-modal.components-reconnect-show .components-reconnect-first-attempt-visible .components-reconnect-repeated-attempt-visible,
+#components-reconnect-modal.components-reconnect-show .components-reconnect-first-attempt-visible .components-reconnect-failed-visible,
+#components-reconnect-modal.components-reconnect-show .components-reconnect-first-attempt-visible .components-pause-visible,
+#components-reconnect-modal.components-reconnect-show .components-reconnect-first-attempt-visible .components-resume-failed-visible,
+#components-reconnect-modal.components-reconnect-show .components-reconnect-first-attempt-visible .components-rejoining-animation, #components-reconnect-modal.components-reconnect-show .components-rejoining-animation .components-reconnect-first-attempt-visible,
+#components-reconnect-modal.components-reconnect-show .components-rejoining-animation .components-reconnect-repeated-attempt-visible,
+#components-reconnect-modal.components-reconnect-show .components-rejoining-animation .components-reconnect-failed-visible,
+#components-reconnect-modal.components-reconnect-show .components-rejoining-animation .components-pause-visible,
+#components-reconnect-modal.components-reconnect-show .components-rejoining-animation .components-resume-failed-visible,
+#components-reconnect-modal.components-reconnect-show .components-rejoining-animation .components-rejoining-animation, #components-reconnect-modal.components-reconnect-paused .components-pause-visible .components-reconnect-first-attempt-visible,
+#components-reconnect-modal.components-reconnect-paused .components-pause-visible .components-reconnect-repeated-attempt-visible,
+#components-reconnect-modal.components-reconnect-paused .components-pause-visible .components-reconnect-failed-visible,
+#components-reconnect-modal.components-reconnect-paused .components-pause-visible .components-pause-visible,
+#components-reconnect-modal.components-reconnect-paused .components-pause-visible .components-resume-failed-visible,
+#components-reconnect-modal.components-reconnect-paused .components-pause-visible .components-rejoining-animation, #components-reconnect-modal.components-reconnect-resume-failed .components-resume-failed-visible .components-reconnect-first-attempt-visible,
+#components-reconnect-modal.components-reconnect-resume-failed .components-resume-failed-visible .components-reconnect-repeated-attempt-visible,
+#components-reconnect-modal.components-reconnect-resume-failed .components-resume-failed-visible .components-reconnect-failed-visible,
+#components-reconnect-modal.components-reconnect-resume-failed .components-resume-failed-visible .components-pause-visible,
+#components-reconnect-modal.components-reconnect-resume-failed .components-resume-failed-visible .components-resume-failed-visible,
+#components-reconnect-modal.components-reconnect-resume-failed .components-resume-failed-visible .components-rejoining-animation, #components-reconnect-modal.components-reconnect-retrying .components-reconnect-first-attempt-visible,
+#components-reconnect-modal.components-reconnect-retrying .components-reconnect-repeated-attempt-visible,
+#components-reconnect-modal.components-reconnect-retrying .components-reconnect-failed-visible,
+#components-reconnect-modal.components-reconnect-retrying .components-pause-visible,
+#components-reconnect-modal.components-reconnect-retrying .components-resume-failed-visible,
+#components-reconnect-modal.components-reconnect-retrying .components-rejoining-animation, #components-reconnect-modal.components-reconnect-retrying .components-reconnect-repeated-attempt-visible .components-reconnect-first-attempt-visible,
+#components-reconnect-modal.components-reconnect-retrying .components-reconnect-repeated-attempt-visible .components-reconnect-repeated-attempt-visible,
+#components-reconnect-modal.components-reconnect-retrying .components-reconnect-repeated-attempt-visible .components-reconnect-failed-visible,
+#components-reconnect-modal.components-reconnect-retrying .components-reconnect-repeated-attempt-visible .components-pause-visible,
+#components-reconnect-modal.components-reconnect-retrying .components-reconnect-repeated-attempt-visible .components-resume-failed-visible,
+#components-reconnect-modal.components-reconnect-retrying .components-reconnect-repeated-attempt-visible .components-rejoining-animation, #components-reconnect-modal.components-reconnect-retrying .components-rejoining-animation .components-reconnect-first-attempt-visible,
+#components-reconnect-modal.components-reconnect-retrying .components-rejoining-animation .components-reconnect-repeated-attempt-visible,
+#components-reconnect-modal.components-reconnect-retrying .components-rejoining-animation .components-reconnect-failed-visible,
+#components-reconnect-modal.components-reconnect-retrying .components-rejoining-animation .components-pause-visible,
+#components-reconnect-modal.components-reconnect-retrying .components-rejoining-animation .components-resume-failed-visible,
+#components-reconnect-modal.components-reconnect-retrying .components-rejoining-animation .components-rejoining-animation, #components-reconnect-modal.components-reconnect-failed .components-reconnect-first-attempt-visible,
+#components-reconnect-modal.components-reconnect-failed .components-reconnect-repeated-attempt-visible,
+#components-reconnect-modal.components-reconnect-failed .components-reconnect-failed-visible,
+#components-reconnect-modal.components-reconnect-failed .components-pause-visible,
+#components-reconnect-modal.components-reconnect-failed .components-resume-failed-visible,
+#components-reconnect-modal.components-reconnect-failed .components-rejoining-animation, #components-reconnect-modal.components-reconnect-failed .components-reconnect-failed-visible .components-reconnect-first-attempt-visible,
+#components-reconnect-modal.components-reconnect-failed .components-reconnect-failed-visible .components-reconnect-repeated-attempt-visible,
+#components-reconnect-modal.components-reconnect-failed .components-reconnect-failed-visible .components-reconnect-failed-visible,
+#components-reconnect-modal.components-reconnect-failed .components-reconnect-failed-visible .components-pause-visible,
+#components-reconnect-modal.components-reconnect-failed .components-reconnect-failed-visible .components-resume-failed-visible,
+#components-reconnect-modal.components-reconnect-failed .components-reconnect-failed-visible .components-rejoining-animation {
+  display: block;
+}
+#components-reconnect-modal {
+  background-color: var(--mesh-background);
+  color: var(--mesh-primary);
+  width: 20rem;
+  margin: 20vh auto;
+  padding: 2rem;
+  border: 1px solid var(--mesh-border-color);
+  border-radius: 0;
+  box-shadow: none;
+  opacity: 0;
+  transition: display 0.5s allow-discrete, overlay 0.5s allow-discrete;
+  animation: components-reconnect-modal-fadeOutOpacity 0.5s both;
+}
+#components-reconnect-modal[open] {
+  animation: components-reconnect-modal-slideUp 1.5s cubic-bezier(0.05, 0.89, 0.25, 1.02) 0.3s, components-reconnect-modal-fadeInOpacity 0.5s ease-in-out 0.3s;
+  animation-fill-mode: both;
+}
+#components-reconnect-modal::backdrop {
+  background-color: rgba(0, 0, 0, 0.7);
+  animation: components-reconnect-modal-fadeInOpacity 0.5s ease-in-out;
+  opacity: 1;
+}
+#components-reconnect-modal p {
+  margin: 0;
+  text-align: center;
+  color: var(--mesh-primary);
+}
+#components-reconnect-modal button {
+  border: 1px solid var(--mesh-primary);
+  background-color: transparent;
+  color: var(--mesh-primary);
+  padding: 4px 24px;
+  border-radius: 0;
+  font-family: "Courier New", Courier, monospace;
+  transition: all 0.2s;
+}
+#components-reconnect-modal button:hover {
+  background-color: var(--mesh-primary);
+  color: var(--mesh-background);
+}
+#components-reconnect-modal button:active {
+  background-color: var(--mesh-secondary);
+  color: var(--mesh-primary);
+}
+
+@keyframes components-reconnect-modal-slideUp {
+  0% {
+    transform: translateY(30px) scale(0.95);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+@keyframes components-reconnect-modal-fadeInOpacity {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes components-reconnect-modal-fadeOutOpacity {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.components-reconnect-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.components-rejoining-animation {
+  position: relative;
+  width: 80px;
+  height: 80px;
+}
+.components-rejoining-animation div {
+  position: absolute;
+  border: 3px solid var(--mesh-primary);
+  opacity: 1;
+  border-radius: 50%;
+  animation: components-rejoining-animation 1.5s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+}
+.components-rejoining-animation div:nth-child(2) {
+  animation-delay: -0.5s;
+}
+
+@keyframes components-rejoining-animation {
+  0% {
+    top: 40px;
+    left: 40px;
+    width: 0;
+    height: 0;
+    opacity: 0;
+  }
+  4.9% {
+    top: 40px;
+    left: 40px;
+    width: 0;
+    height: 0;
+    opacity: 0;
+  }
+  5% {
+    top: 40px;
+    left: 40px;
+    width: 0;
+    height: 0;
+    opacity: 1;
+  }
+  100% {
+    top: 0px;
+    left: 0px;
+    width: 80px;
+    height: 80px;
+    opacity: 0;
+  }
+}
+/* ── Dashboard stat cards ─────────────────────────────────────────── */
+.stat-card {
+  background: var(--mesh-background);
+  border: 1px solid var(--mesh-border-color);
+  border-radius: 0;
+  padding: 1.25rem;
+  text-align: center;
+  transition: border-color 0.2s;
+}
+.stat-card:hover {
+  border-color: var(--mesh-primary-light);
+}
+.stat-card__label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--mesh-secondary);
+}
+.stat-card__value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--mesh-primary-light);
+  line-height: 1.1;
+}
+.stat-card__sub {
+  font-size: 0.75rem;
+  color: var(--mesh-secondary);
+  margin-top: 0.2rem;
+}
+
+/* ── Info row ───────────────────────────────────────────────────── */
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--mesh-border-color);
+  font-size: 0.9rem;
+  color: var(--mesh-primary);
+}
+.info-row span {
+  color: var(--mesh-secondary);
+}
+
+/* ── Tables ───────────────────────────────────────────────────────── */
+.table {
+  --bs-table-bg: transparent;
+  --bs-table-striped-bg: transparent;
+  --bs-table-hover-bg: var(--mesh-secondary);
+  --bs-table-border-color: var(--mesh-border-color);
+  --bs-table-color: var(--mesh-primary);
+  color: var(--mesh-primary);
+  border-color: var(--mesh-border-color);
+  margin-bottom: 0;
+}
+.table-dark th {
+  background: var(--mesh-secondary);
+  color: var(--mesh-primary-light);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-color: var(--mesh-border-color);
+}
+.table tbody tr:hover td {
+  color: var(--mesh-primary-light);
+}
+
+code {
+  color: var(--mesh-primary);
+  background: transparent;
+  padding: 0.1em 0.3em;
+  border-radius: 0;
+  font-size: 0.85em;
+  font-family: "Courier New", Courier, monospace;
+}
+
+/* ── Chat ─────────────────────────────────────────────────────────── */
+.chat-container {
+  height: calc(100vh - 200px);
+  min-height: 400px;
+}
+
+.chat-messages {
+  overflow-y: auto;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: var(--mesh-background);
+  border-radius: 0;
+  border: 1px solid var(--mesh-border-color);
+}
+
+.chat-bubble-wrap {
+  display: flex;
+  flex-direction: column;
+  max-width: 70%;
+  transition: all 0.2s;
+}
+.chat-bubble-wrap--own {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+.chat-bubble-wrap--own .chat-bubble {
+  background: transparent;
+  border-color: var(--mesh-primary);
+}
+.chat-bubble-wrap--other {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+.chat-bubble {
+  background: transparent;
+  border-radius: 0;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid var(--mesh-border-color);
+}
+
+.chat-sender {
+  font-size: 0.75rem;
+  color: var(--mesh-secondary);
+  margin-bottom: 0.2rem;
+  margin-left: 0.5rem;
+}
+
+.chat-text {
+  color: var(--mesh-primary);
+  word-break: break-word;
+}
+
+.chat-time {
+  font-size: 0.7rem;
+  color: var(--mesh-secondary);
+  margin-top: 0.2rem;
+}
+
+.chat-input-area input {
+  background: var(--mesh-background);
+  color: var(--mesh-primary);
+  border: 1px solid var(--mesh-border-color);
+  border-radius: 0;
+  font-family: "Courier New", Courier, monospace;
+  transition: border-color 0.15s;
+}
+.chat-input-area input:focus {
+  border-color: var(--mesh-primary-light);
+  box-shadow: none;
+  background: var(--mesh-background);
+  color: var(--mesh-primary);
+}
+
+/* ── List group ───────────────────────────────────────────────────── */
+.list-group-item {
+  background: transparent;
+  border-color: var(--mesh-border-color);
+  color: var(--mesh-primary);
+  transition: background 0.2s;
+}
+.list-group-item:hover {
+  background: var(--mesh-secondary);
+}
+
+.msg-own {
+  border-left: 3px solid var(--mesh-primary);
+}
+
+/* ── Commands ─────────────────────────────────────────────────────── */
+.confirm-box {
+  background: transparent;
+  border: 1px solid var(--mesh-border-color);
+  border-radius: 0;
+  padding: 1rem;
+}
+.confirm-box--danger {
+  border-color: var(--mesh-danger);
+}
+
+.danger-text {
+  color: var(--mesh-danger);
+}
+
+/* ── Inline action links ──────────────────────────────────────────── */
+.action-link {
+  color: var(--mesh-secondary);
+  cursor: pointer;
+  font-size: 0.8rem;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.action-link:hover {
+  color: var(--mesh-primary);
+}
+.action-link--danger {
+  color: var(--mesh-danger);
+}
+.action-link--danger:hover {
+  color: var(--mesh-danger);
+}
+
+/* ── Nodes pagination ─────────────────────────────────────────────── */
+.nodes-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.6rem;
+}
+
+.pagination-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.1rem;
+}
+
+.page-link {
+  background: none;
+  border: none;
+  color: var(--mesh-primary);
+  padding: 0.25rem 0.55rem;
+  border-radius: 0;
+  cursor: pointer;
+  font-size: 0.875rem;
+  text-decoration: none;
+  transition: color 0.15s, background 0.15s;
+  user-select: none;
+}
+.page-link:hover:not(.disabled):not(.active) {
+  color: var(--mesh-primary-light);
+  background: transparent;
+}
+.page-link.active {
+  color: var(--mesh-primary-light);
+  font-weight: 600;
+}
+.page-link.disabled {
+  color: var(--mesh-tertiary);
+  cursor: default;
+  pointer-events: none;
+}
+
+/* ── Page Content ─────────────────────────────────────────────────── */
+.page-content {
+  padding: 1em;
+}
+
+/* ── Utility ──────────────────────────────────────────────────────── */
+.text-success {
+  color: var(--mesh-primary) !important;
+}
+
+.text-warning {
+  color: var(--mesh-warning) !important;
+}
+
+.text-danger {
+  color: var(--mesh-danger) !important;
+}
+
+.text-muted {
+  color: var(--mesh-tertiary) !important;
+}
+
+/* ── Overlay ─────────────────────────────────────────────────────── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* ── Dialog ───────────────────────────────────────────────────────── */
+.dialog {
+  display: block;
+  position: static;
+  margin: 0;
+  border: 1px solid var(--mesh-border-color);
+  border-radius: 0;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  padding: 0;
+  background: var(--mesh-background);
+  color: var(--mesh-primary);
+}
+.dialog__content {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 400px;
+}
+.dialog__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+.dialog__header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--mesh-primary);
+}
+.dialog__title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--mesh-primary);
+}
+.dialog__body {
+  flex: 1;
+  color: var(--mesh-primary);
+}
+.dialog__message {
+  margin: 0;
+  line-height: 1.5;
+}
+.dialog__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--mesh-border-color);
+}
+.dialog__actions, .dialog__buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  width: 100%;
+}
+.dialog--confirmation {
+  min-width: 420px;
+}
+
+/* ── Dialog Buttons ───────────────────────────────────────────────── */
+.btn--close {
+  background: transparent;
+  border: none;
+  color: var(--mesh-primary);
+  padding: 0.25rem 0.5rem;
+  line-height: 1;
+  opacity: 0.7;
+  cursor: pointer;
+}
+.btn--close:hover {
+  opacity: 1;
+  color: var(--mesh-primary-light);
+}
+
+.btn--primary {
+  background-color: var(--mesh-primary);
+  border-color: var(--mesh-primary);
+  color: var(--mesh-background);
+}
+.btn--primary:hover {
+  background-color: var(--mesh-primary-light);
+  border-color: var(--mesh-primary-light);
+}
+
+.btn--secondary {
+  background-color: transparent;
+  border: 1px solid var(--mesh-border-color);
+  color: var(--mesh-primary);
+}
+.btn--secondary:hover {
+  border-color: var(--mesh-primary);
+}
+
+/* ── Logs Page ──────────────────────────────────────────────────────── */
+.logs-page {
+  display: flex;
+  height: 100%;
+  gap: 0;
+  background: var(--mesh-background);
+  color: var(--mesh-text-color);
+}
+.logs-page__sidebar {
+  width: 300px;
+  border-right: 1px solid var(--mesh-border-color);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.logs-page__sidebar h2 {
+  margin: 0;
+  padding: 1rem;
+  border-bottom: 1px solid var(--mesh-border-color);
+  font-size: 1.1rem;
+  color: var(--mesh-primary);
+}
+.logs-page__file-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.logs-page__file-list p {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  margin: 0;
+}
+.logs-page__file-item {
+  padding: 0.75rem;
+  background: transparent;
+  border-left: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--mesh-primary);
+}
+.logs-page__file-item:hover {
+  background: var(--mesh-secondary);
+  border-left-color: var(--mesh-primary-light);
+  color: var(--mesh-primary-light);
+}
+.logs-page__file-item--active {
+  background: var(--mesh-secondary);
+  border-left-color: var(--mesh-primary-light);
+  color: var(--mesh-primary-light);
+}
+.logs-page__file-item-name {
+  flex: 1;
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.logs-page__file-item-size {
+  font-size: 0.8rem;
+}
+.logs-page__panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--mesh-background);
+  overflow: hidden;
+}
+.logs-page__empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mesh-secondary);
+  font-size: 1.1rem;
+  padding: 1rem;
+  text-align: center;
+}
+.logs-page__header {
+  padding: 1rem;
+  border-bottom: 1px solid var(--mesh-border-color);
+}
+.logs-page__header h2 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--mesh-primary);
+}
+.logs-page__content {
+  flex: 0 1 auto;
+  overflow: auto;
+  padding: 1rem;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.85rem;
+  overflow: scroll;
+  height: 90vh;
+}
+.logs-page__content pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  color: var(--mesh-text-color);
+  line-height: 1.4;
+}
+
+@media (max-width: 768px) {
+  .logs-page {
+    flex-direction: column;
+  }
+  .logs-page__sidebar {
+    width: 100%;
+    max-height: 30%;
+    border-right: none;
+    border-bottom: 1px solid var(--mesh-border-color);
+  }
+  .logs-page__panel {
+    flex: 1;
+  }
+}
+
+/*# sourceMappingURL=main.css.map */

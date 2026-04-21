@@ -1,19 +1,19 @@
 /* Terminal Amber Theme - Warm amber phosphor on black */
 :root {
-    --mesh-green: #d4a02a;
-    --mesh-bright: #ffcc00;
-    --mesh-dim: #8a6a1a;
-    --mesh-very-dim: #4a3a0a;
-    --mesh-border: #6a5a1a;
+    --mesh-primary: #d4a02a;
+    --mesh-primary-light: #ffcc00;
+    --mesh-secondary: #8a6a1a;
+    --mesh-tertiary: #b08820;
+    --mesh-border-color: #6a5a1a;
     --mesh-accent: #d4a02a;
-    --mesh-bg: #000000;
-    --mesh-text: #d4a02a;
+    --mesh-background: #000000;
+    --mesh-text-color: #d4a02a;
     --mesh-danger: #ff8888;
     --mesh-warning: #ffdd66;
     --mesh-black: #000000;
 }
 
 html, body {
-    background: var(--mesh-bg);
-    color: var(--mesh-text);
+    background: var(--mesh-background);
+    color: var(--mesh-text-color);
 }

@@ -1,13 +1,23 @@
 using Meshfrantic.Components;
 using Meshfrantic.Services;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .WriteTo.Console()
+    .WriteTo.File(Path.Combine(AppContext.BaseDirectory, "logs", "blazor", ".log"), rollingInterval: RollingInterval.Day)
+    .CreateLogger();
+
+builder.Host.UseSerilog();
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddSingleton<MeshtasticService>();
 builder.Services.AddSingleton<ThemeService>();
+builder.Services.AddSingleton<LogsService>();
 builder.Services.AddHostedService<MeshtasticReaderService>();
 
 var app = builder.Build();

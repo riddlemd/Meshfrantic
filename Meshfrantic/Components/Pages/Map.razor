@@ -1,0 +1,140 @@
+@page "/map"
+@inject MeshtasticService Mesh
+@implements IDisposable
+
+<PageTitle>Meshfrantic — Map</PageTitle>
+
+<div class="px-4">
+<h2 class="mb-3">Map</h2>
+
+@if (!Mesh.IsConnected)
+{
+    <div class="alert alert-info">Connect to a device to see node positions on the map.</div>
+}
+else
+{
+    var total = Mesh.Container.Nodes.Count;
+    var positioned = Mesh.Container.Nodes.Count(n =>
+        n.Position != null && (n.Position.LatitudeI != 0 || n.Position.LongitudeI != 0));
+
+    <div class="mb-2 small text-muted">@positioned of @total node(s) have GPS position data.</div>
+
+    @if (positioned == 0)
+    {
+        <div class="alert alert-secondary">No nodes with position data yet.</div>
+    }
+
+    <RealTimeMap @ref="_map" height="600px" width="100%" OnAfterMapLoaded="OnMapLoaded" />
+}
+</div>
+
+@code {
+    private RealTimeMap? _map;
+    private bool _mapReady;
+    private bool _wasConnected;
+
+    protected override void OnInitialized()
+    {
+        Mesh.StateChanged += OnStateChanged;
+        _wasConnected = Mesh.IsConnected;
+    }
+
+    private async void OnStateChanged()
+    {
+        await InvokeAsync(async () =>
+        {
+            if (_wasConnected && !Mesh.IsConnected)
+                _mapReady = false;
+            _wasConnected = Mesh.IsConnected;
+            StateHasChanged();
+            if (_mapReady && _map != null)
+                await UpdateMarkersAsync();
+        });
+    }
+
+    private async Task OnMapLoaded(RealTimeMap.MapEventArgs args)
+    {
+        _mapReady = true;
+        await UpdateMarkersAsync();
+    }
+
+    private async Task UpdateMarkersAsync()
+    {
+        if (_map == null || !Mesh.IsConnected) return;
+
+        var ownNum = Mesh.Container.MyNodeInfo?.MyNodeNum ?? 0;
+        await _map.Geometric.Points.upload(GetPoints(ownNum), true);
+
+        _map.Geometric.Points.Appearance(item => item.type == "own").pattern = new RealTimeMap.PointSymbol()
+        {
+            radius = 10,
+            fillColor = "#ff6600",
+            color = "#ffffff",
+            weight = 2,
+            opacity = 1,
+            fillOpacity = 1
+        };
+
+        _map.Geometric.Points.Appearance(item => item.type == "peer").pattern = new RealTimeMap.PointSymbol()
+        {
+            radius = 8,
+            fillColor = "#00c170",
+            color = "#ffffff",
+            weight = 2,
+            opacity = 1,
+            fillOpacity = 1
+        };
+
+        _map.Geometric.Points.Appearance().pattern = new RealTimeMap.PointTooltip()
+        {
+            content = "${value}",
+            permanent = false,
+            opacity = 0.95
+        };
+    }
+
+    private List<RealTimeMap.StreamPoint> GetPoints(uint ownNum) =>
+        Mesh.Container.Nodes
+            .Where(n => n.Position != null && (n.Position.LatitudeI != 0 || n.Position.LongitudeI != 0))
+            .Select(n =>
+            {
+                var lat = n.Position!.LatitudeI / 1e7;
+                var lng = n.Position.LongitudeI / 1e7;
+                var name = n.User?.LongName?.Length > 0 ? n.User.LongName
+                         : n.User?.ShortName?.Length > 0 ? n.User.ShortName
+                         : "!" + n.Num.ToString("x8");
+                var alt = n.Position.Altitude != 0 ? $"{n.Position.Altitude} m" : "—";
+                var snr = n.Snr != 0 ? $"{n.Snr:F1} dB" : "—";
+                var heard = n.LastHeard > 0
+                    ? TimeAgo(DateTimeOffset.FromUnixTimeSeconds(n.LastHeard).LocalDateTime)
+                    : "—";
+                var ownBadge = n.Num == ownNum ? " <span style=\"color:#ff6600\">[YOU]</span>" : "";
+                return new RealTimeMap.StreamPoint
+                {
+                    guid = Guid.NewGuid(),
+                    latitude = lat,
+                    longitude = lng,
+                    type = n.Num == ownNum ? "own" : "peer",
+                    value = $"<div style=\"font-family:monospace;min-width:160px\">" +
+                            $"<strong>{name}</strong>{ownBadge}<br>" +
+                            $"<small>!{n.Num:x8}</small><br><hr style=\"margin:4px 0\">" +
+                            $"Coords: {lat:F5}, {lng:F5}<br>" +
+                            $"Alt: {alt}<br>" +
+                            $"SNR: {snr}<br>" +
+                            $"Heard: {heard}" +
+                            $"</div>"
+                };
+            })
+            .ToList();
+
+    private static string TimeAgo(DateTime dt)
+    {
+        var diff = DateTime.Now - dt;
+        if (diff.TotalSeconds < 60) return $"{(int)diff.TotalSeconds}s ago";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}m ago";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}h ago";
+        return dt.ToString("MM/dd HH:mm");
+    }
+
+    public void Dispose() => Mesh.StateChanged -= OnStateChanged;
+}
