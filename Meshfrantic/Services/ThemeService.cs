@@ -4,17 +4,19 @@ public class ThemeService
 {
     public string CurrentTheme { get; private set; } = "terminal-green";
 
-    public IReadOnlyList<string> AvailableThemes { get; } = new[]
+    public IReadOnlyDictionary<string, string> Themes { get; } = new Dictionary<string, string>
     {
-        "terminal-green",
-        "terminal-amber",
-        "terminal-white",
-        "nostromo"
+        { "terminal-green", "Green" },
+        { "terminal-amber", "Amber" },
+        { "terminal-white", "White" },
+        { "nostromo", "Nostromo" },
+        { "terminator", "T-800" },
+        { "cyberdyne", "Cyberdyne" }
     };
 
     public void SetTheme(string theme)
     {
-        if (AvailableThemes.Contains(theme))
+        if (Themes.Keys.Contains(theme))
         {
             CurrentTheme = theme;
         }

@@ -1,0 +1,19 @@
+/* Cyberdyne theme - Corporate tech aesthetic: electric blue on cold steel */
+:root {
+    --mesh-green: #4a9eff;
+    --mesh-bright: #00d4ff;
+    --mesh-dim: #2a5a99;
+    --mesh-very-dim: #152840;
+    --mesh-border: #1e3d66;
+    --mesh-accent: #4a9eff;
+    --mesh-bg: #0a0d14;
+    --mesh-text: #4a9eff;
+    --mesh-danger: #ff4444;
+    --mesh-warning: #ffaa00;
+    --mesh-black: #000000;
+}
+
+html, body {
+    background: var(--mesh-bg);
+    color: var(--mesh-text);
+}

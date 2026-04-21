@@ -31,10 +31,10 @@
             <div class="connection-right d-flex align-items-center gap-2">
                 <span class="theme-label">Theme</span>
                 <select class="form-select form-select-sm theme-select" value="@_selectedTheme" @onchange="OnThemeChanged">
-                    <option value="terminal-green">Green</option>
-                    <option value="terminal-amber">Amber</option>
-                    <option value="terminal-white">White</option>
-                    <option value="nostromo">Nostromo</option>
+                    @foreach (var theme in ThemeService.Themes)
+                    {
+                        <option value="@theme.Key">@theme.Value</option>
+                    }
                 </select>
 
                 <span class="port-label">Port</span>
