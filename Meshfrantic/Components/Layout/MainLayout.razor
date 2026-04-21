@@ -29,6 +29,7 @@
             </div>
 
             <div class="connection-right d-flex align-items-center gap-2">
+                <span class="theme-label">Theme</span>
                 <select class="form-select form-select-sm theme-select" value="@_selectedTheme" @onchange="OnThemeChanged">
                     <option value="terminal-green">Green</option>
                     <option value="terminal-amber">Amber</option>
@@ -36,6 +37,7 @@
                     <option value="nostromo">Nostromo</option>
                 </select>
 
+                <span class="port-label">Port</span>
                 <select class="form-select form-select-sm port-select"
                         @bind="_selectedPort"
                         disabled="@Mesh.IsConnected">
@@ -69,6 +71,16 @@
                         Disconnect
                     </button>
                 }
+
+                @if (Mesh.IsConnected && OwnBattery is > 0 and var bat)
+                {
+                    <div class="battery-indicator" style="color: @BatteryColor(bat)" title="Battery: @bat%">
+                        <span class="battery-icon">
+                            <span class="battery-fill" style="width: @bat%"></span>
+                        </span>
+                        <span class="battery-pct">@bat%</span>
+                    </div>
+                }
             </div>
 
             @if (!string.IsNullOrEmpty(_error))
@@ -96,8 +108,24 @@
     private string _error = string.Empty;
     private bool _themeLoaded = false;
 
+    private uint OwnNodeNum => Mesh.Container.MyNodeInfo?.MyNodeNum ?? 0;
+
+    private uint? OwnBattery =>
+        OwnNodeNum > 0
+            ? Mesh.Container.Nodes.FirstOrDefault(n => n.Num == OwnNodeNum)?.DeviceMetrics?.BatteryLevel
+            : null;
+
+    private static string BatteryColor(uint pct) => pct switch
+    {
+        >= 60 => "var(--mesh-bright)",
+        >= 30 => "var(--mesh-warning)",
+        _     => "var(--mesh-danger)"
+    };
+
     protected override void OnInitialized()
     {
+        if (Mesh.IsConnected && Mesh.ConnectedPort != null)
+            _selectedPort = Mesh.ConnectedPort;
         Mesh.StateChanged += OnStateChanged;
     }
 
