@@ -30,16 +30,24 @@ Open `https://localhost:5001` in your browser.
 
 ### Green
 A Classic phosphor green
+<img width="1910" height="482" alt="image" src="https://github.com/user-attachments/assets/e4e62a55-2291-4cb9-a2da-d8998b1cfd36" />
+
 
 ### Amber
 A Warm amber terminal
+<img width="1909" height="476" alt="image" src="https://github.com/user-attachments/assets/6964684e-1cec-43f7-8f5c-7abc39c54b79" />
+
 
 ### White
 Greys and whites
+<img width="1909" height="481" alt="image" src="https://github.com/user-attachments/assets/4105e94d-4cb0-458c-9884-3c54892e3cbc" />
 
 
 ### Nostromo
 Alien/Aliens inspired — aged amber + xenomorph acid
+<img width="3813" height="721" alt="image" src="https://github.com/user-attachments/assets/891b1a05-e92a-4bd4-8886-fb03ec5bc17a" />
+
+
 ## Architecture
 
 Blazor Server
