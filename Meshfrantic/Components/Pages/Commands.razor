@@ -1,0 +1,214 @@
+@page "/commands"
+@inject MeshtasticService Mesh
+@implements IDisposable
+
+<PageTitle>Meshfrantic — Commands</PageTitle>
+
+<h2 class="mb-3">Commands</h2>
+
+@if (!Mesh.IsConnected)
+{
+    <div class="alert alert-info">Connect to a device to send commands.</div>
+}
+else
+{
+    <div class="row g-4">
+        <!-- Device Config -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header fw-semibold">Device</div>
+                <div class="card-body d-flex flex-column gap-3">
+
+                    <div>
+                        <p class="mb-1 text-muted small">Re-request current configuration and node list from the device.</p>
+                        <button class="btn btn-outline-primary" @onclick="RequestConfig" disabled="@_busy">
+                            Request Config
+                        </button>
+                    </div>
+
+                    <hr />
+
+                    <div>
+                        <p class="mb-1 text-muted small">Reboot the device after a short delay.</p>
+                        <button class="btn btn-outline-warning" @onclick="() => _showReboot = true" disabled="@_busy">
+                            Reboot Node
+                        </button>
+                    </div>
+
+                    @if (_showReboot)
+                    {
+                        <div class="confirm-box">
+                            <p>Reboot the device in <strong>5 seconds</strong>?</p>
+                            <button class="btn btn-warning btn-sm me-2" @onclick="Reboot">Yes, Reboot</button>
+                            <button class="btn btn-secondary btn-sm" @onclick="() => _showReboot = false">Cancel</button>
+                        </div>
+                    }
+
+                    <hr />
+
+                    <div>
+                        <p class="mb-1 text-muted small danger-text">
+                            <strong>Danger:</strong> Resets the node database. Cannot be undone.
+                        </p>
+                        <button class="btn btn-outline-danger" @onclick="() => _showResetDb = true" disabled="@_busy">
+                            Reset Node DB
+                        </button>
+                    </div>
+
+                    @if (_showResetDb)
+                    {
+                        <div class="confirm-box danger">
+                            <p>This will wipe the node database on the device. Are you sure?</p>
+                            <button class="btn btn-danger btn-sm me-2" @onclick="ResetNodeDb">Yes, Reset DB</button>
+                            <button class="btn btn-secondary btn-sm" @onclick="() => _showResetDb = false">Cancel</button>
+                        </div>
+                    }
+
+                    <hr />
+
+                    <div>
+                        <p class="mb-1 text-muted small danger-text">
+                            <strong>Danger:</strong> Factory reset clears all configuration. Cannot be undone.
+                        </p>
+                        <button class="btn btn-danger" @onclick="() => _showFactoryReset = true" disabled="@_busy">
+                            Factory Reset
+                        </button>
+                    </div>
+
+                    @if (_showFactoryReset)
+                    {
+                        <div class="confirm-box danger">
+                            <p>This will factory reset the device. <strong>All config will be lost.</strong> Continue?</p>
+                            <button class="btn btn-danger btn-sm me-2" @onclick="FactoryReset">Yes, Factory Reset</button>
+                            <button class="btn btn-secondary btn-sm" @onclick="() => _showFactoryReset = false">Cancel</button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Set Owner -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header fw-semibold">Set Owner</div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3">Change the display name shown to other mesh nodes.</p>
+                    <div class="mb-3">
+                        <label class="form-label">Long Name</label>
+                        <input class="form-control" placeholder="e.g. Michael's Node" maxlength="39"
+                               @bind="_longName" disabled="@_busy" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Short Name</label>
+                        <input class="form-control" placeholder="e.g. MICH" maxlength="4"
+                               @bind="_shortName" disabled="@_busy" />
+                        <div class="form-text">Max 4 characters</div>
+                    </div>
+                    <button class="btn btn-primary"
+                            @onclick="SetOwner"
+                            disabled="@(string.IsNullOrWhiteSpace(_longName) || string.IsNullOrWhiteSpace(_shortName) || _busy)">
+                        Apply
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Command Log -->
+    @if (_log.Any())
+    {
+        <div class="card mt-4">
+            <div class="card-header fw-semibold d-flex justify-content-between">
+                <span>Command Log</span>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="() => _log.Clear()">Clear</button>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    @foreach (var entry in _log.AsEnumerable().Reverse())
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="@(entry.Success ? "text-success" : "text-danger")">
+                                @entry.Message
+                            </span>
+                            <small class="text-muted">@entry.Time.ToString("HH:mm:ss")</small>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private bool _busy;
+    private bool _showReboot;
+    private bool _showFactoryReset;
+    private bool _showResetDb;
+    private string _longName = string.Empty;
+    private string _shortName = string.Empty;
+
+    private record LogEntry(string Message, bool Success, DateTime Time = default)
+    {
+        public DateTime Time { get; init; } = Time == default ? DateTime.Now : Time;
+    }
+    private readonly List<LogEntry> _log = [];
+
+    protected override void OnInitialized()
+    {
+        Mesh.StateChanged += OnStateChanged;
+
+        // Pre-fill with current owner info if available
+        var ownNum = Mesh.Container.MyNodeInfo?.MyNodeNum ?? 0;
+        var ownNode = ownNum > 0 ? Mesh.Container.Nodes.FirstOrDefault(n => n.Num == ownNum) : null;
+        if (ownNode?.User != null)
+        {
+            _longName = ownNode.User.LongName;
+            _shortName = ownNode.User.ShortName;
+        }
+    }
+
+    private void OnStateChanged() => InvokeAsync(StateHasChanged);
+
+    private async Task ExecuteCommand(string label, Func<Task> action)
+    {
+        _busy = true;
+        try
+        {
+            await action();
+            _log.Add(new LogEntry($"{label}: sent successfully", true));
+        }
+        catch (Exception ex)
+        {
+            _log.Add(new LogEntry($"{label}: {ex.Message}", false));
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private Task RequestConfig() => ExecuteCommand("Request Config", Mesh.RequestConfigAsync);
+
+    private async Task Reboot()
+    {
+        _showReboot = false;
+        await ExecuteCommand("Reboot", () => Mesh.RebootAsync(5));
+    }
+
+    private async Task FactoryReset()
+    {
+        _showFactoryReset = false;
+        await ExecuteCommand("Factory Reset", Mesh.FactoryResetAsync);
+    }
+
+    private async Task ResetNodeDb()
+    {
+        _showResetDb = false;
+        await ExecuteCommand("Reset Node DB", Mesh.ResetNodeDbAsync);
+    }
+
+    private Task SetOwner() => ExecuteCommand("Set Owner",
+        () => Mesh.SetOwnerAsync(_longName.Trim(), _shortName.Trim()));
+
+    public void Dispose() => Mesh.StateChanged -= OnStateChanged;
+}

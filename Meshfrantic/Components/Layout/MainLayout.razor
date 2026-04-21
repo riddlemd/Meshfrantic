@@ -1,0 +1,169 @@
+@inherits LayoutComponentBase
+@inject MeshtasticService Mesh
+@inject ThemeService ThemeService
+@inject IJSRuntime JS
+@implements IDisposable
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4 connection-bar">
+            <div class="connection-left d-flex align-items-center gap-2">
+                <div class="status-badge @(Mesh.IsConnected ? "status-connected" : "status-disconnected")">
+                    <span class="status-dot"></span>
+                    @if (Mesh.IsConnected)
+                    {
+                        var nodeInfo = Mesh.Container.MyNodeInfo;
+                        var nodeNum = nodeInfo?.MyNodeNum ?? 0;
+                        var name = nodeNum > 0 ? Mesh.Container.GetNodeDisplayName(nodeNum) : Mesh.ConnectedPort;
+                        <span>@name</span>
+                    }
+                    else
+                    {
+                        <span>Disconnected</span>
+                    }
+                </div>
+            </div>
+
+            <div class="connection-right d-flex align-items-center gap-2">
+                <select class="form-select form-select-sm theme-select" value="@_selectedTheme" @onchange="OnThemeChanged">
+                    <option value="terminal-green">Green</option>
+                    <option value="terminal-amber">Amber</option>
+                    <option value="terminal-white">White</option>
+                    <option value="nostromo">Nostromo</option>
+                </select>
+
+                <select class="form-select form-select-sm port-select"
+                        @bind="_selectedPort"
+                        disabled="@Mesh.IsConnected">
+                    <option value="">-- Select port --</option>
+                    @foreach (var port in Mesh.AvailablePorts)
+                    {
+                        <option value="@port">@port</option>
+                    }
+                </select>
+
+                <button class="btn btn-sm btn-outline-secondary"
+                        @onclick="RefreshPorts"
+                        disabled="@Mesh.IsConnected"
+                        title="Refresh ports">
+                    &#8635;
+                </button>
+
+                @if (!Mesh.IsConnected)
+                {
+                    <button class="btn btn-sm btn-success"
+                            @onclick="Connect"
+                            disabled="@(string.IsNullOrEmpty(_selectedPort) || _busy)">
+                        @if (_busy) { <span>Connecting...</span> } else { <span>Connect</span> }
+                    </button>
+                }
+                else
+                {
+                    <button class="btn btn-sm btn-danger"
+                            @onclick="Disconnect"
+                            disabled="@_busy">
+                        Disconnect
+                    </button>
+                }
+            </div>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <span class="text-danger ms-2 small">@_error</span>
+            }
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">&#x2715;</span>
+</div>
+
+@code {
+    private string _selectedPort = string.Empty;
+    private string _selectedTheme = "terminal-green";
+    private bool _busy;
+    private string _error = string.Empty;
+    private bool _themeLoaded = false;
+
+    protected override void OnInitialized()
+    {
+        Mesh.StateChanged += OnStateChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_themeLoaded)
+        {
+            _selectedTheme = await JS.InvokeAsync<string>("getTheme");
+            _themeLoaded = true;
+            StateHasChanged();
+        }
+
+        if (firstRender && !Mesh.IsConnected && Mesh.AvailablePorts.Count == 1)
+        {
+            _selectedPort = Mesh.AvailablePorts[0];
+            await Connect();
+        }
+    }
+
+    private void OnStateChanged() => InvokeAsync(StateHasChanged);
+
+    private void RefreshPorts()
+    {
+        Mesh.RefreshPorts();
+        _selectedPort = string.Empty;
+    }
+
+    private async Task Connect()
+    {
+        if (string.IsNullOrEmpty(_selectedPort)) return;
+        _busy = true;
+        _error = string.Empty;
+        try
+        {
+            await Mesh.ConnectAsync(_selectedPort);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task Disconnect()
+    {
+        _busy = true;
+        try
+        {
+            await Mesh.DisconnectAsync();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task OnThemeChanged(ChangeEventArgs e)
+    {
+        var theme = e.Value?.ToString() ?? "terminal-green";
+        _selectedTheme = theme;
+        ThemeService.SetTheme(theme);
+        await JS.InvokeVoidAsync("setTheme", theme);
+    }
+
+    public void Dispose() => Mesh.StateChanged -= OnStateChanged;
+}

@@ -1,0 +1,19 @@
+/* Terminal White Theme - Classic white phosphor on black */
+:root {
+    --mesh-green: #cccccc;
+    --mesh-bright: #ffffff;
+    --mesh-dim: #666666;
+    --mesh-very-dim: #333333;
+    --mesh-border: #444444;
+    --mesh-accent: #cccccc;
+    --mesh-bg: #000000;
+    --mesh-text: #cccccc;
+    --mesh-danger: #ff9999;
+    --mesh-warning: #ffee88;
+    --mesh-black: #000000;
+}
+
+html, body {
+    background: var(--mesh-bg);
+    color: var(--mesh-text);
+}

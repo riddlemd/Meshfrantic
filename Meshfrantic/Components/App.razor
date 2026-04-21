@@ -1,0 +1,51 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <ResourcePreloader />
+    <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]" />
+    <link rel="stylesheet" href="@Assets["app.css"]" />
+    <link id="theme-stylesheet" rel="stylesheet" href="/css/theme/terminal-green.css" />
+    <link rel="stylesheet" href="@Assets["Meshfrantic.styles.css"]" />
+    <ImportMap />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <HeadOutlet />
+</head>
+
+<body>
+    <Routes />
+    <ReconnectModal />
+    <script src="@Assets["_framework/blazor.web.js"]"></script>
+    <script>
+        window.scrollToBottom = (elementId) => {
+            const el = document.getElementById(elementId);
+            if (el) el.scrollTop = el.scrollHeight;
+        };
+
+        window.setTheme = (themeName) => {
+            const link = document.getElementById('theme-stylesheet');
+            if (link) {
+                link.href = `/css/theme/${themeName}.css`;
+                localStorage.setItem('meshfrantic-theme', themeName);
+            }
+        };
+
+        window.getTheme = () => {
+            return localStorage.getItem('meshfrantic-theme') || 'terminal-green';
+        };
+
+        // Apply saved theme on load
+        (function() {
+            const theme = localStorage.getItem('meshfrantic-theme') || 'terminal-green';
+            const link = document.getElementById('theme-stylesheet');
+            if (link) {
+                link.href = `/css/theme/${theme}.css`;
+            }
+        })();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,212 @@
+@page "/nodes"
+@inject MeshtasticService Mesh
+@implements IDisposable
+
+<PageTitle>Meshfrantic — Nodes</PageTitle>
+
+<h2 class="mb-3">Nodes</h2>
+
+@if (!Mesh.IsConnected)
+{
+    <div class="alert alert-info">Connect to a device to see the node list.</div>
+}
+else if (!Mesh.Container.Nodes.Any())
+{
+    <div class="alert alert-secondary">Waiting for node data from device...</div>
+}
+else
+{
+    var ownNodeNum = Mesh.Container.MyNodeInfo?.MyNodeNum ?? 0;
+    var sorted = Mesh.Container.Nodes.OrderBy(n => n.Num == ownNodeNum ? 0 : 1).ToList();
+    var page = PagedNodes(sorted);
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Node ID</th>
+                    <th>Long Name</th>
+                    <th>Short</th>
+                    <th>Hardware</th>
+                    <th>Last Heard</th>
+                    <th>SNR</th>
+                    <th>Hops</th>
+                    <th>Battery</th>
+                    <th>Position</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var node in page)
+                {
+                    var isOwn = node.Num == ownNodeNum;
+                    var hasPosition = node.Position != null &&
+                                      (node.Position.LatitudeI != 0 || node.Position.LongitudeI != 0);
+                    <tr>
+                        <td>
+                            <code>!@node.Num.ToString("x8")</code>
+                            @if (isOwn)
+                            {
+                                <span class="badge bg-primary ms-1">You</span>
+                            }
+                        </td>
+                        <td>@(node.User?.LongName ?? "—")</td>
+                        <td><strong>@(node.User?.ShortName ?? "—")</strong></td>
+                        <td><span class="text-muted small">@(node.User?.HwModel.ToString() ?? "—")</span></td>
+                        <td>
+                            @if (node.LastHeard > 0)
+                            {
+                                var heard = DateTimeOffset.FromUnixTimeSeconds(node.LastHeard).LocalDateTime;
+                                <span title="@heard.ToString("g")">@TimeAgo(heard)</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                        </td>
+                        <td>
+                            @if (node.Snr != 0)
+                            {
+                                <span class="@SnrClass(node.Snr)">@node.Snr.ToString("F1") dB</span>
+                            }
+                            else { <span class="text-muted">—</span> }
+                        </td>
+                        <td>
+                            @if (node.HopsAway > 0) { <span>@node.HopsAway</span> }
+                            else if (isOwn) { <span class="text-muted">local</span> }
+                            else { <span class="text-muted">direct</span> }
+                        </td>
+                        <td>
+                            @if (node.DeviceMetrics?.BatteryLevel is > 0 and var bat)
+                            {
+                                <span class="@BatteryClass(bat)">@bat%</span>
+                            }
+                            else { <span class="text-muted">—</span> }
+                        </td>
+                        <td>
+                            @if (hasPosition)
+                            {
+                                var lat = node.Position!.LatitudeI / 1e7;
+                                var lon = node.Position!.LongitudeI / 1e7;
+                                <span class="text-muted small">@lat.ToString("F4"), @lon.ToString("F4")</span>
+                            }
+                            else { <span class="text-muted">—</span> }
+                        </td>
+                        <td class="text-end">
+                            @if (!isOwn)
+                            {
+                                @if (_confirmDeleteNum == node.Num)
+                                {
+                                    <span class="me-1 small text-danger">Remove?</span>
+                                    <a class="action-link danger me-2" @onclick="() => ConfirmRemove(node.Num)" @onclick:preventDefault>Yes</a>
+                                    <a class="action-link" @onclick="CancelRemove" @onclick:preventDefault>No</a>
+                                }
+                                else
+                                {
+                                    <a class="action-link danger" @onclick="() => _confirmDeleteNum = node.Num" @onclick:preventDefault>Remove</a>
+                                }
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="nodes-footer">
+        <span class="text-muted small">
+            @sorted.Count node(s) &mdash; showing @((_currentPage - 1) * PageSize + 1)&ndash;@(Math.Min(_currentPage * PageSize, sorted.Count))
+        </span>
+        @if (TotalPages(sorted.Count) > 1)
+        {
+            <nav class="pagination-nav">
+                <a class="page-link @(_currentPage == 1 ? "disabled" : "")"
+                   @onclick="() => GoToPage(1)" @onclick:preventDefault>&#171;</a>
+                <a class="page-link @(_currentPage == 1 ? "disabled" : "")"
+                   @onclick="() => GoToPage(_currentPage - 1)" @onclick:preventDefault>&#8249;</a>
+
+                @foreach (var p in PageNumbers(sorted.Count))
+                {
+                    <a class="page-link @(p == _currentPage ? "active" : "")"
+                       @onclick="() => GoToPage(p)" @onclick:preventDefault>@p</a>
+                }
+
+                <a class="page-link @(_currentPage == TotalPages(sorted.Count) ? "disabled" : "")"
+                   @onclick="() => GoToPage(_currentPage + 1)" @onclick:preventDefault>&#8250;</a>
+                <a class="page-link @(_currentPage == TotalPages(sorted.Count) ? "disabled" : "")"
+                   @onclick="() => GoToPage(TotalPages(sorted.Count))" @onclick:preventDefault>&#187;</a>
+            </nav>
+        }
+    </div>
+}
+
+@code {
+    private const int PageSize = 20;
+    private int _currentPage = 1;
+    private uint? _confirmDeleteNum;
+
+    protected override void OnInitialized() => Mesh.StateChanged += OnStateChanged;
+
+    private void OnStateChanged()
+    {
+        // If nodes shrink, clamp page to valid range
+        var total = Mesh.Container.Nodes.Count;
+        var max = Math.Max(1, (int)Math.Ceiling(total / (double)PageSize));
+        if (_currentPage > max) _currentPage = max;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void CancelRemove() => _confirmDeleteNum = null;
+
+    private async Task ConfirmRemove(uint nodeNum)
+    {
+        _confirmDeleteNum = null;
+        await Mesh.RemoveNodeAsync(nodeNum);
+    }
+
+    private void GoToPage(int page)
+    {
+        var total = Mesh.Container.Nodes.Count;
+        var max = TotalPages(total);
+        _currentPage = Math.Clamp(page, 1, Math.Max(1, max));
+    }
+
+    private IEnumerable<Meshtastic.Protobufs.NodeInfo> PagedNodes(List<Meshtastic.Protobufs.NodeInfo> nodes)
+        => nodes.Skip((_currentPage - 1) * PageSize).Take(PageSize);
+
+    private int TotalPages(int count) => Math.Max(1, (int)Math.Ceiling(count / (double)PageSize));
+
+    private IEnumerable<int> PageNumbers(int count)
+    {
+        var total = TotalPages(count);
+        var start = Math.Max(1, _currentPage - 2);
+        var end = Math.Min(total, start + 4);
+        start = Math.Max(1, end - 4);
+        return Enumerable.Range(start, end - start + 1);
+    }
+
+    public void Dispose() => Mesh.StateChanged -= OnStateChanged;
+
+    private static string TimeAgo(DateTime dt)
+    {
+        var diff = DateTime.Now - dt;
+        if (diff.TotalSeconds < 60) return $"{(int)diff.TotalSeconds}s ago";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}m ago";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}h ago";
+        return dt.ToString("MM/dd HH:mm");
+    }
+
+    private static string SnrClass(float snr) => snr switch
+    {
+        >= 5 => "text-success",
+        >= 0 => "text-warning",
+        _ => "text-danger"
+    };
+
+    private static string BatteryClass(uint pct) => pct switch
+    {
+        >= 60 => "text-success",
+        >= 30 => "text-warning",
+        _ => "text-danger"
+    };
+}

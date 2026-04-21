@@ -1,0 +1,106 @@
+@page "/messages"
+@inject MeshtasticService Mesh
+@inject IJSRuntime JS
+@implements IDisposable
+
+<PageTitle>Meshfrantic — Messages</PageTitle>
+
+<h2 class="mb-3">Messages</h2>
+
+@if (!Mesh.IsConnected)
+{
+    <div class="alert alert-info">Connect to a device to send and receive messages.</div>
+}
+else
+{
+    <div class="chat-container d-flex flex-column">
+        <div class="chat-messages flex-grow-1" id="chat-scroll">
+            @if (!Mesh.Messages.Any())
+            {
+                <div class="text-center text-muted py-5">No messages yet. Send one below!</div>
+            }
+            else
+            {
+                @foreach (var msg in Mesh.Messages)
+                {
+                    <div class="chat-bubble-wrap @(msg.IsOwn ? "own" : "other")">
+                        @if (!msg.IsOwn)
+                        {
+                            <div class="chat-sender">@msg.FromNodeName</div>
+                        }
+                        <div class="chat-bubble">
+                            <div class="chat-text">@msg.Text</div>
+                            <div class="chat-time">@msg.Timestamp.ToString("HH:mm:ss")</div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+
+        <div class="chat-input-area d-flex gap-2 mt-3">
+            <input class="form-control"
+                   placeholder="Type a message..."
+                   @bind="_draft"
+                   @bind:event="oninput"
+                   @onkeydown="OnKeyDown"
+                   disabled="@_sending"
+                   maxlength="200" />
+            <button class="btn btn-primary"
+                    @onclick="SendMessage"
+                    disabled="@(string.IsNullOrWhiteSpace(_draft) || _sending)">
+                Send
+            </button>
+        </div>
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <div class="text-danger small mt-1">@_error</div>
+        }
+    </div>
+}
+
+@code {
+    private string _draft = string.Empty;
+    private bool _sending;
+    private string _error = string.Empty;
+
+    protected override void OnInitialized() => Mesh.StateChanged += OnStateChanged;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await JS.InvokeVoidAsync("scrollToBottom", "chat-scroll");
+    }
+
+    private void OnStateChanged() => InvokeAsync(StateHasChanged);
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+            await SendMessage();
+    }
+
+    private async Task SendMessage()
+    {
+        if (string.IsNullOrWhiteSpace(_draft) || _sending) return;
+
+        _sending = true;
+        _error = string.Empty;
+        var text = _draft.Trim();
+        _draft = string.Empty;
+
+        try
+        {
+            await Mesh.SendTextMessageAsync(text);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _sending = false;
+        }
+    }
+
+    public void Dispose() => Mesh.StateChanged -= OnStateChanged;
+}

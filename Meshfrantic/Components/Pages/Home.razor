@@ -1,0 +1,128 @@
+@page "/"
+@inject MeshtasticService Mesh
+@implements IDisposable
+
+<PageTitle>Meshfrantic — Dashboard</PageTitle>
+
+<h2 class="mb-4">Dashboard</h2>
+
+@if (!Mesh.IsConnected)
+{
+    <div class="alert alert-info d-flex align-items-center gap-2">
+        <span style="font-size:1.4rem">&#128268;</span>
+        <div>
+            <strong>No device connected.</strong>
+            Select a COM port in the toolbar and click <em>Connect</em> to get started.
+        </div>
+    </div>
+}
+else
+{
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-lg-3">
+            <div class="stat-card">
+                <div class="stat-label">Status</div>
+                <div class="stat-value text-success">Connected</div>
+                <div class="stat-sub">@Mesh.ConnectedPort</div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="stat-card">
+                <div class="stat-label">Nodes Seen</div>
+                <div class="stat-value">@Mesh.Container.Nodes.Count</div>
+                <div class="stat-sub">in node DB</div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="stat-card">
+                <div class="stat-label">Messages</div>
+                <div class="stat-value">@Mesh.Messages.Count</div>
+                <div class="stat-sub">this session</div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="stat-card">
+                <div class="stat-label">Channels</div>
+                <div class="stat-value">@Mesh.Container.Channels.Count</div>
+                <div class="stat-sub">configured</div>
+            </div>
+        </div>
+    </div>
+
+    @if (OwnNode != null)
+    {
+        <div class="card mb-4">
+            <div class="card-header fw-semibold">This Device</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="info-row"><span>Long Name</span><strong>@(OwnNode.User?.LongName ?? "—")</strong></div>
+                        <div class="info-row"><span>Short Name</span><strong>@(OwnNode.User?.ShortName ?? "—")</strong></div>
+                        <div class="info-row"><span>Node ID</span><strong>!@OwnNodeNum.ToString("x8")</strong></div>
+                    </div>
+                    @if (OwnNode.Position != null && (OwnNode.Position.LatitudeI != 0 || OwnNode.Position.LongitudeI != 0))
+                    {
+                        var lat = (OwnNode.Position.LatitudeI / 1e7).ToString("F5");
+                        var lon = (OwnNode.Position.LongitudeI / 1e7).ToString("F5");
+                        <div class="col-md-4">
+                            <div class="info-row"><span>Position</span><strong>@lat, @lon</strong></div>
+                            <div class="info-row"><span>Altitude</span><strong>@OwnNode.Position.Altitude m</strong></div>
+                        </div>
+                    }
+                    <div class="col-md-4">
+                        <div class="info-row"><span>Hardware</span><strong>@(OwnNode.User?.HwModel.ToString() ?? "—")</strong></div>
+                        <div class="info-row"><span>Firmware</span><strong>@(Mesh.Container.Metadata?.FirmwareVersion ?? "—")</strong></div>
+                        @if (OwnNode.DeviceMetrics?.BatteryLevel is > 0 and var bat)
+                        {
+                            <div class="info-row"><span>Battery</span><strong class="@BatteryClass(bat)">@bat%</strong></div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (Mesh.Messages.Any())
+    {
+        <div class="card">
+            <div class="card-header fw-semibold d-flex justify-content-between">
+                <span>Recent Messages</span>
+                <a href="/messages" class="small">View all &rarr;</a>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    @foreach (var msg in Mesh.Messages.TakeLast(5).Reverse())
+                    {
+                        <li class="list-group-item @(msg.IsOwn ? "msg-own" : "")">
+                            <div class="d-flex justify-content-between">
+                                <strong>@msg.FromNodeName</strong>
+                                <small class="text-muted">@msg.Timestamp.ToString("HH:mm:ss")</small>
+                            </div>
+                            <div>@msg.Text</div>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private uint OwnNodeNum => Mesh.Container.MyNodeInfo?.MyNodeNum ?? 0;
+
+    private Meshtastic.Protobufs.NodeInfo? OwnNode =>
+        OwnNodeNum > 0
+            ? Mesh.Container.Nodes.FirstOrDefault(n => n.Num == OwnNodeNum)
+            : null;
+
+    protected override void OnInitialized() => Mesh.StateChanged += OnStateChanged;
+    private void OnStateChanged() => InvokeAsync(StateHasChanged);
+    public void Dispose() => Mesh.StateChanged -= OnStateChanged;
+
+    private static string BatteryClass(uint pct) => pct switch
+    {
+        >= 60 => "text-success",
+        >= 30 => "text-warning",
+        _ => "text-danger"
+    };
+}
