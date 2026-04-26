@@ -1182,6 +1182,43 @@ code {
   color: var(--mesh-primary);
 }
 
+/* ── Traceroute path ─────────────────────────────────────────────── */
+.traceroute-path {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-bottom: 0.5rem;
+}
+
+.traceroute-hop {
+  font-size: 0.8rem;
+  color: var(--mesh-secondary);
+  padding: 0.1rem 0 0.1rem 1rem;
+  border-left: 2px solid var(--mesh-border-color);
+  position: relative;
+}
+.traceroute-hop::before {
+  content: "→";
+  position: absolute;
+  left: -0.6rem;
+  color: var(--mesh-border-color);
+}
+.traceroute-hop:first-child {
+  border-left-color: var(--mesh-primary);
+  color: var(--mesh-primary);
+}
+.traceroute-hop:first-child::before {
+  content: none;
+}
+.traceroute-hop:first-child {
+  padding-left: 0;
+}
+.traceroute-hop--dest {
+  border-left-color: var(--mesh-primary);
+  color: var(--mesh-primary-light);
+  font-weight: 600;
+}
+
 /* ── Config tabs ──────────────────────────────────────────────────── */
 .config-tabs {
   display: flex;

@@ -118,68 +118,114 @@ else
                             <td colspan="10">
                                 @{
                                     Mesh.NodeTelemetryMap.TryGetValue(node.Num, out var tel);
+                                    Mesh.TracerouteResults.TryGetValue(node.Num, out var route);
                                 }
                                 <div class="node-expand-body">
-                                    <div class="row g-2">
-                                        @if (tel != null)
+                                    <div class="row g-3">
+                                        <!-- Node info -->
+                                        <div class="col-md-3">
+                                            <div class="tel-group-label">Node Info</div>
+                                            <div class="tel-row"><span>Node ID</span><strong>!@node.Num.ToString("x8")</strong></div>
+                                            @if (node.User != null)
+                                            {
+                                                <div class="tel-row"><span>Long Name</span><strong>@node.User.LongName</strong></div>
+                                                <div class="tel-row"><span>Short Name</span><strong>@node.User.ShortName</strong></div>
+                                                <div class="tel-row"><span>Hardware</span><strong>@node.User.HwModel</strong></div>
+                                            }
+                                            @if (node.LastHeard > 0)
+                                            {
+                                                var heard = DateTimeOffset.FromUnixTimeSeconds(node.LastHeard).LocalDateTime;
+                                                <div class="tel-row"><span>Last Heard</span><strong>@TimeAgo(heard)</strong></div>
+                                            }
+                                            <div class="tel-row"><span>Hops Away</span><strong>@node.HopsAway</strong></div>
+                                            @if (node.Snr != 0)
+                                            {
+                                                <div class="tel-row"><span>SNR</span><strong class="@SnrClass(node.Snr)">@node.Snr.ToString("F1") dB</strong></div>
+                                            }
+                                        </div>
+
+                                        <!-- Position -->
+                                        @if (node.Position != null && (node.Position.LatitudeI != 0 || node.Position.LongitudeI != 0))
                                         {
-                                            @if (tel.ChannelUtilization.HasValue || tel.AirUtilTx.HasValue || tel.UptimeSeconds.HasValue)
-                                            {
-                                                <div class="col-md-4">
-                                                    <div class="tel-group-label">Radio</div>
-                                                    @if (tel.ChannelUtilization.HasValue)
-                                                    {
-                                                        <div class="tel-row"><span>Ch Util</span><strong>@tel.ChannelUtilization.Value.ToString("F1")%</strong></div>
-                                                    }
-                                                    @if (tel.AirUtilTx.HasValue)
-                                                    {
-                                                        <div class="tel-row"><span>Air Util TX</span><strong>@tel.AirUtilTx.Value.ToString("F1")%</strong></div>
-                                                    }
-                                                    @if (tel.UptimeSeconds.HasValue)
-                                                    {
-                                                        <div class="tel-row"><span>Uptime</span><strong>@FormatUptime(tel.UptimeSeconds.Value)</strong></div>
-                                                    }
-                                                </div>
-                                            }
-                                            @if (tel.Temperature.HasValue || tel.RelativeHumidity.HasValue || tel.BarometricPressure.HasValue)
-                                            {
-                                                <div class="col-md-4">
-                                                    <div class="tel-group-label">Environment</div>
-                                                    @if (tel.Temperature.HasValue)
-                                                    {
-                                                        <div class="tel-row"><span>Temperature</span><strong>@tel.Temperature.Value.ToString("F1") °C</strong></div>
-                                                    }
-                                                    @if (tel.RelativeHumidity.HasValue)
-                                                    {
-                                                        <div class="tel-row"><span>Humidity</span><strong>@tel.RelativeHumidity.Value.ToString("F1")%</strong></div>
-                                                    }
-                                                    @if (tel.BarometricPressure.HasValue)
-                                                    {
-                                                        <div class="tel-row"><span>Pressure</span><strong>@tel.BarometricPressure.Value.ToString("F1") hPa</strong></div>
-                                                    }
-                                                </div>
-                                            }
-                                            @if (tel.WindSpeed.HasValue || tel.Lux.HasValue)
-                                            {
-                                                <div class="col-md-4">
-                                                    <div class="tel-group-label">Other</div>
-                                                    @if (tel.WindSpeed.HasValue)
-                                                    {
-                                                        <div class="tel-row"><span>Wind</span><strong>@tel.WindSpeed.Value.ToString("F1") m/s @(tel.WindDirection.HasValue ? $"{tel.WindDirection}°" : "")</strong></div>
-                                                    }
-                                                    @if (tel.Lux.HasValue)
-                                                    {
-                                                        <div class="tel-row"><span>Light</span><strong>@tel.Lux.Value.ToString("F0") lux</strong></div>
-                                                    }
-                                                </div>
-                                            }
-                                            <div class="col-12">
-                                                <span class="text-muted" style="font-size:0.7rem">Last telemetry: @tel.LastUpdated.ToString("HH:mm:ss")</span>
+                                            <div class="col-md-3">
+                                                <div class="tel-group-label">Position</div>
+                                                <div class="tel-row"><span>Latitude</span><strong>@((node.Position.LatitudeI / 1e7).ToString("F5"))</strong></div>
+                                                <div class="tel-row"><span>Longitude</span><strong>@((node.Position.LongitudeI / 1e7).ToString("F5"))</strong></div>
+                                                <div class="tel-row"><span>Altitude</span><strong>@node.Position.Altitude m</strong></div>
                                             </div>
                                         }
-                                        else
+
+                                        <!-- Telemetry -->
+                                        @if (tel != null)
                                         {
-                                            <div class="col-12 text-muted small">No telemetry received yet from this node.</div>
+                                            <div class="col-md-3">
+                                                <div class="tel-group-label">Telemetry</div>
+                                                @if (tel.BatteryLevel.HasValue)
+                                                {
+                                                    <div class="tel-row"><span>Battery</span><strong class="@BatteryClass(tel.BatteryLevel.Value)">@tel.BatteryLevel.Value%</strong></div>
+                                                }
+                                                @if (tel.Voltage.HasValue)
+                                                {
+                                                    <div class="tel-row"><span>Voltage</span><strong>@tel.Voltage.Value.ToString("F2") V</strong></div>
+                                                }
+                                                @if (tel.ChannelUtilization.HasValue)
+                                                {
+                                                    <div class="tel-row"><span>Ch Util</span><strong>@tel.ChannelUtilization.Value.ToString("F1")%</strong></div>
+                                                }
+                                                @if (tel.AirUtilTx.HasValue)
+                                                {
+                                                    <div class="tel-row"><span>Air Util TX</span><strong>@tel.AirUtilTx.Value.ToString("F1")%</strong></div>
+                                                }
+                                                @if (tel.UptimeSeconds.HasValue)
+                                                {
+                                                    <div class="tel-row"><span>Uptime</span><strong>@FormatUptime(tel.UptimeSeconds.Value)</strong></div>
+                                                }
+                                                @if (tel.Temperature.HasValue)
+                                                {
+                                                    <div class="tel-row"><span>Temp</span><strong>@tel.Temperature.Value.ToString("F1") °C</strong></div>
+                                                }
+                                                @if (tel.RelativeHumidity.HasValue)
+                                                {
+                                                    <div class="tel-row"><span>Humidity</span><strong>@tel.RelativeHumidity.Value.ToString("F1")%</strong></div>
+                                                }
+                                                @if (tel.BarometricPressure.HasValue)
+                                                {
+                                                    <div class="tel-row"><span>Pressure</span><strong>@tel.BarometricPressure.Value.ToString("F1") hPa</strong></div>
+                                                }
+                                                <div class="tel-row"><span style="font-size:0.65rem">updated</span><strong style="font-size:0.65rem">@tel.LastUpdated.ToString("HH:mm:ss")</strong></div>
+                                            </div>
+                                        }
+
+                                        <!-- Traceroute -->
+                                        @if (!isOwn)
+                                        {
+                                            <div class="col-md-3">
+                                                <div class="tel-group-label">Traceroute</div>
+                                                @if (route != null)
+                                                {
+                                                    <div class="traceroute-path">
+                                                        <div class="traceroute-hop">@Mesh.Container.GetNodeDisplayName(Mesh.Container.MyNodeInfo?.MyNodeNum ?? 0) (you)</div>
+                                                        @foreach (var hop in route.SkipLast(1))
+                                                        {
+                                                            <div class="traceroute-hop">@Mesh.Container.GetNodeDisplayName(hop)</div>
+                                                        }
+                                                        <div class="traceroute-hop traceroute-hop--dest">@Mesh.Container.GetNodeDisplayName(node.Num)</div>
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <div class="text-muted small mb-2">No route data yet.</div>
+                                                }
+                                                <button class="btn btn-sm btn-outline-secondary mt-1"
+                                                        @onclick="() => SendTraceroute(node.Num)"
+                                                        disabled="@(_tracerouteInProgress == node.Num)">
+                                                    @(_tracerouteInProgress == node.Num ? "Sending..." : "Request Traceroute")
+                                                </button>
+                                                @if (!string.IsNullOrEmpty(_tracerouteError))
+                                                {
+                                                    <div class="text-danger small mt-1">@_tracerouteError</div>
+                                                }
+                                            </div>
                                         }
                                     </div>
                                 </div>
@@ -224,9 +270,29 @@ else
     private int _currentPage = 1;
     private uint? _confirmDeleteNum;
     private uint? _expandedNode;
+    private uint? _tracerouteInProgress;
+    private string _tracerouteError = string.Empty;
 
     private void ToggleExpand(uint nodeNum) =>
         _expandedNode = _expandedNode == nodeNum ? null : nodeNum;
+
+    private async Task SendTraceroute(uint nodeNum)
+    {
+        _tracerouteInProgress = nodeNum;
+        _tracerouteError = string.Empty;
+        try
+        {
+            await Mesh.RequestTracerouteAsync(nodeNum);
+        }
+        catch (Exception ex)
+        {
+            _tracerouteError = ex.Message;
+        }
+        finally
+        {
+            _tracerouteInProgress = null;
+        }
+    }
 
     protected override void OnInitialized() => Mesh.StateChanged += OnStateChanged;
 

@@ -1,6 +1,7 @@
 using Meshtastic.Connections;
 using Meshtastic.Data;
 using Meshtastic.Data.MessageFactories;
+using Google.Protobuf;
 using Meshtastic.Protobufs;
 using Meshfrantic.Models;
 
@@ -15,6 +16,7 @@ public class MeshtasticService : IDisposable
     private readonly List<ChatMessage> _messages = [];
     private readonly Dictionary<uint, ChatMessage> _pendingAcks = [];
     private readonly Dictionary<uint, NodeTelemetry> _nodeTelemetry = [];
+    private readonly Dictionary<uint, List<uint>> _tracerouteResults = [];
     private readonly SemaphoreSlim _sendLock = new(1, 1);
 
     public event Action? StateChanged;
@@ -25,6 +27,7 @@ public class MeshtasticService : IDisposable
     public IReadOnlyList<string> AvailablePorts { get; private set; } = [];
     public IReadOnlyList<ChatMessage> Messages => _messages;
     public IReadOnlyDictionary<uint, NodeTelemetry> NodeTelemetryMap => _nodeTelemetry;
+    public IReadOnlyDictionary<uint, List<uint>> TracerouteResults => _tracerouteResults;
 
     public MeshtasticService(ILogger<MeshtasticService> logger)
     {
@@ -52,6 +55,7 @@ public class MeshtasticService : IDisposable
             _messages.Clear();
             _pendingAcks.Clear();
             _nodeTelemetry.Clear();
+            _tracerouteResults.Clear();
             ConnectedPort = port;
             IsConnected = true;
 
@@ -276,6 +280,30 @@ public class MeshtasticService : IDisposable
         StateChanged?.Invoke();
     }
 
+    public async Task RequestTracerouteAsync(uint destNodeNum)
+    {
+        if (_connection == null || !IsConnected)
+            throw new InvalidOperationException("Not connected to a device");
+
+        var rd = new RouteDiscovery();
+        var packet = new MeshPacket
+        {
+            To = destNodeNum,
+            WantAck = false,
+            Decoded = new Meshtastic.Protobufs.Data
+            {
+                Portnum = PortNum.TracerouteApp,
+                Payload = ByteString.CopyFrom(rd.ToByteArray()),
+                WantResponse = true
+            },
+            Id = (uint)Random.Shared.Next(1, int.MaxValue)
+        };
+
+        var toRadio = _connection.ToRadioFactory.CreateMeshPacketMessage(packet);
+        await _connection.WriteToRadio(toRadio);
+        _logger.LogInformation("Traceroute requested to node {NodeId}", destNodeNum);
+    }
+
     public async Task RequestConfigAsync()
     {
         if (_connection == null || !IsConnected)
@@ -358,6 +386,9 @@ public class MeshtasticService : IDisposable
             case PortNum.TelemetryApp:
                 HandleTelemetry(packet);
                 break;
+            case PortNum.TracerouteApp:
+                HandleTraceroute(packet);
+                break;
         }
     }
 
@@ -384,6 +415,15 @@ public class MeshtasticService : IDisposable
             DestNodeId = destNodeId,
             PacketId = packet.Id
         });
+    }
+
+    private void HandleTraceroute(MeshPacket packet)
+    {
+        var rd = RouteDiscovery.Parser.ParseFrom(packet.Decoded.Payload);
+        // The route list contains the intermediate hops; the destination is packet.From
+        var route = new List<uint>(rd.Route) { packet.From };
+        _tracerouteResults[packet.From] = route;
+        _logger.LogDebug("Traceroute result from {NodeId}: {Hops} hops", packet.From, route.Count);
     }
 
     private void HandleTelemetry(MeshPacket packet)
