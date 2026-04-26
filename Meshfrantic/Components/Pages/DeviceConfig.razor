@@ -1,0 +1,437 @@
+@page "/config"
+@using Meshtastic.Protobufs
+@using RegionCode = Meshtastic.Protobufs.Config.Types.LoRaConfig.Types.RegionCode
+@using ModemPreset = Meshtastic.Protobufs.Config.Types.LoRaConfig.Types.ModemPreset
+@using DeviceRole = Meshtastic.Protobufs.Config.Types.DeviceConfig.Types.Role
+@using RebroadcastMode = Meshtastic.Protobufs.Config.Types.DeviceConfig.Types.RebroadcastMode
+@using GpsMode = Meshtastic.Protobufs.Config.Types.PositionConfig.Types.GpsMode
+@using PairingMode = Meshtastic.Protobufs.Config.Types.BluetoothConfig.Types.PairingMode
+@inject MeshtasticService Mesh
+@implements IDisposable
+
+<PageTitle>Meshfrantic — Config</PageTitle>
+
+<div class="px-4">
+<h2 class="mb-3">Device Config</h2>
+
+@if (!Mesh.IsConnected)
+{
+    <div class="alert alert-info">Connect to a device to configure it.</div>
+}
+else
+{
+    <p class="text-muted small mb-3">Changes are written to the device immediately. Reconnect for all changes to take effect.</p>
+
+    <div class="config-tabs mb-4">
+        @foreach (var tab in new[] { ("lora","LoRa"), ("device","Device"), ("position","Position"), ("bluetooth","Bluetooth"), ("power","Power") })
+        {
+            var t = tab;
+            <button class="config-tab @(_tab == t.Item1 ? "config-tab--active" : "")"
+                    @onclick="() => _tab = t.Item1">@t.Item2</button>
+        }
+    </div>
+
+    @if (!string.IsNullOrEmpty(_status))
+    {
+        <div class="small mb-3 @(_statusOk ? "text-success" : "text-danger")">@_status</div>
+    }
+
+    @if (_tab == "lora")
+    {
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Region</label>
+                <select class="form-select" @bind="_loraRegion" disabled="@_busy">
+                    @foreach (var v in Enum.GetValues<RegionCode>())
+                    {
+                        <option value="@v">@v</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">TX Power (dBm, 0 = auto)</label>
+                <input class="form-control" type="number" min="0" max="30" @bind="_loraTxPower" disabled="@_busy" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Hop Limit</label>
+                <input class="form-control" type="number" min="0" max="7" @bind="_loraHopLimit" disabled="@_busy" />
+            </div>
+            <div class="col-12 d-flex gap-4 flex-wrap">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="lora-tx-enabled" @bind="_loraTxEnabled" disabled="@_busy" />
+                    <label class="form-check-label" for="lora-tx-enabled">TX Enabled</label>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="lora-use-preset" @bind="_loraUsePreset" disabled="@_busy" />
+                    <label class="form-check-label" for="lora-use-preset">Use Preset</label>
+                </div>
+            </div>
+            @if (_loraUsePreset)
+            {
+                <div class="col-md-4">
+                    <label class="form-label">Modem Preset</label>
+                    <select class="form-select" @bind="_loraModemPreset" disabled="@_busy">
+                        @foreach (var v in Enum.GetValues<ModemPreset>())
+                        {
+                            <option value="@v">@v</option>
+                        }
+                    </select>
+                </div>
+            }
+            else
+            {
+                <div class="col-md-4">
+                    <label class="form-label">Bandwidth (Hz)</label>
+                    <input class="form-control" type="number" @bind="_loraBandwidth" disabled="@_busy" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Spread Factor</label>
+                    <input class="form-control" type="number" min="7" max="12" @bind="_loraSpreadFactor" disabled="@_busy" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Coding Rate</label>
+                    <input class="form-control" type="number" min="5" max="8" @bind="_loraCodingRate" disabled="@_busy" />
+                </div>
+            }
+        </div>
+        <div class="mt-3">
+            <button class="btn btn-primary btn-sm" @onclick="SaveLora" disabled="@_busy">
+                @(_busy ? "Saving..." : "Save LoRa")
+            </button>
+        </div>
+    }
+
+    @if (_tab == "device")
+    {
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Role</label>
+                <select class="form-select" @bind="_devRole" disabled="@_busy">
+                    @foreach (var v in Enum.GetValues<DeviceRole>())
+                    {
+                        <option value="@v">@v</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Rebroadcast Mode</label>
+                <select class="form-select" @bind="_devRebroadcast" disabled="@_busy">
+                    @foreach (var v in Enum.GetValues<RebroadcastMode>())
+                    {
+                        <option value="@v">@v</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Node Info Broadcast (secs)</label>
+                <input class="form-control" type="number" min="0" @bind="_devNodeInfoSecs" disabled="@_busy" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Timezone (POSIX string)</label>
+                <input class="form-control" @bind="_devTzdef" placeholder="e.g. EST5EDT,M3.2.0,M11.1.0" disabled="@_busy" />
+            </div>
+            <div class="col-12 d-flex gap-4 flex-wrap">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="dev-led" @bind="_devLedDisabled" disabled="@_busy" />
+                    <label class="form-check-label" for="dev-led">LED Heartbeat Disabled</label>
+                </div>
+            </div>
+        </div>
+        <div class="mt-3">
+            <button class="btn btn-primary btn-sm" @onclick="SaveDevice" disabled="@_busy">
+                @(_busy ? "Saving..." : "Save Device")
+            </button>
+        </div>
+    }
+
+    @if (_tab == "position")
+    {
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">GPS Mode</label>
+                <select class="form-select" @bind="_posGpsMode" disabled="@_busy">
+                    @foreach (var v in Enum.GetValues<GpsMode>())
+                    {
+                        <option value="@v">@v</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Broadcast Interval (secs, 0 = smart)</label>
+                <input class="form-control" type="number" min="0" @bind="_posBroadcastSecs" disabled="@_busy" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">GPS Update Interval (secs)</label>
+                <input class="form-control" type="number" min="0" @bind="_posGpsUpdateInterval" disabled="@_busy" />
+            </div>
+            <div class="col-12 d-flex gap-4 flex-wrap">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="pos-smart" @bind="_posSmartEnabled" disabled="@_busy" />
+                    <label class="form-check-label" for="pos-smart">Smart Broadcast</label>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="pos-fixed" @bind="_posFixed" disabled="@_busy" />
+                    <label class="form-check-label" for="pos-fixed">Fixed Position</label>
+                </div>
+            </div>
+        </div>
+        <div class="mt-3">
+            <button class="btn btn-primary btn-sm" @onclick="SavePosition" disabled="@_busy">
+                @(_busy ? "Saving..." : "Save Position")
+            </button>
+        </div>
+    }
+
+    @if (_tab == "bluetooth")
+    {
+        <div class="row g-3">
+            <div class="col-12 d-flex gap-4 flex-wrap">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="bt-enabled" @bind="_btEnabled" disabled="@_busy" />
+                    <label class="form-check-label" for="bt-enabled">Bluetooth Enabled</label>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Pairing Mode</label>
+                <select class="form-select" @bind="_btMode" disabled="@_busy">
+                    @foreach (var v in Enum.GetValues<PairingMode>())
+                    {
+                        <option value="@v">@v</option>
+                    }
+                </select>
+            </div>
+            @if (_btMode == PairingMode.FixedPin)
+            {
+                <div class="col-md-4">
+                    <label class="form-label">Fixed PIN</label>
+                    <input class="form-control" type="number" min="0" max="999999" @bind="_btFixedPin" disabled="@_busy" />
+                </div>
+            }
+        </div>
+        <div class="mt-3">
+            <button class="btn btn-primary btn-sm" @onclick="SaveBluetooth" disabled="@_busy">
+                @(_busy ? "Saving..." : "Save Bluetooth")
+            </button>
+        </div>
+    }
+
+    @if (_tab == "power")
+    {
+        <div class="row g-3">
+            <div class="col-12 d-flex gap-4 flex-wrap">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="pwr-saving" @bind="_pwrSaving" disabled="@_busy" />
+                    <label class="form-check-label" for="pwr-saving">Power Saving Mode</label>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Shutdown on Battery After (secs, 0 = off)</label>
+                <input class="form-control" type="number" min="0" @bind="_pwrShutdownSecs" disabled="@_busy" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Wait for Bluetooth (secs)</label>
+                <input class="form-control" type="number" min="0" @bind="_pwrWaitBtSecs" disabled="@_busy" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Light Sleep (secs)</label>
+                <input class="form-control" type="number" min="0" @bind="_pwrLsSecs" disabled="@_busy" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Min Wake (secs)</label>
+                <input class="form-control" type="number" min="0" @bind="_pwrMinWakeSecs" disabled="@_busy" />
+            </div>
+        </div>
+        <div class="mt-3">
+            <button class="btn btn-primary btn-sm" @onclick="SavePower" disabled="@_busy">
+                @(_busy ? "Saving..." : "Save Power")
+            </button>
+        </div>
+    }
+}
+</div>
+
+@code {
+    private string _tab = "lora";
+    private bool _busy;
+    private string _status = string.Empty;
+    private bool _statusOk;
+
+    // LoRa
+    private RegionCode _loraRegion;
+    private ModemPreset _loraModemPreset;
+    private bool _loraUsePreset;
+    private bool _loraTxEnabled;
+    private int _loraTxPower;
+    private uint _loraHopLimit;
+    private uint _loraBandwidth;
+    private uint _loraSpreadFactor;
+    private uint _loraCodingRate;
+
+    // Device
+    private DeviceRole _devRole;
+    private RebroadcastMode _devRebroadcast;
+    private uint _devNodeInfoSecs;
+    private string _devTzdef = string.Empty;
+    private bool _devLedDisabled;
+
+    // Position
+    private GpsMode _posGpsMode;
+    private uint _posBroadcastSecs;
+    private bool _posSmartEnabled;
+    private uint _posGpsUpdateInterval;
+    private bool _posFixed;
+
+    // Bluetooth
+    private bool _btEnabled;
+    private PairingMode _btMode;
+    private uint _btFixedPin;
+
+    // Power
+    private bool _pwrSaving;
+    private uint _pwrShutdownSecs;
+    private uint _pwrWaitBtSecs;
+    private uint _pwrLsSecs;
+    private uint _pwrMinWakeSecs;
+
+    protected override void OnInitialized()
+    {
+        Mesh.StateChanged += OnStateChanged;
+        LoadFromConfig();
+    }
+
+    private void OnStateChanged()
+    {
+        LoadFromConfig();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void LoadFromConfig()
+    {
+        if (!Mesh.IsConnected) return;
+        var lc = Mesh.Container.LocalConfig;
+
+        var lora = lc.Lora;
+        _loraRegion = lora.Region;
+        _loraModemPreset = lora.ModemPreset;
+        _loraUsePreset = lora.UsePreset;
+        _loraTxEnabled = lora.TxEnabled;
+        _loraTxPower = lora.TxPower;
+        _loraHopLimit = lora.HopLimit;
+        _loraBandwidth = lora.Bandwidth;
+        _loraSpreadFactor = lora.SpreadFactor;
+        _loraCodingRate = lora.CodingRate;
+
+        var dev = lc.Device;
+        _devRole = dev.Role;
+        _devRebroadcast = dev.RebroadcastMode;
+        _devNodeInfoSecs = dev.NodeInfoBroadcastSecs;
+        _devTzdef = dev.Tzdef;
+        _devLedDisabled = dev.LedHeartbeatDisabled;
+
+        var pos = lc.Position;
+        _posGpsMode = pos.GpsMode;
+        _posBroadcastSecs = pos.PositionBroadcastSecs;
+        _posSmartEnabled = pos.PositionBroadcastSmartEnabled;
+        _posGpsUpdateInterval = pos.GpsUpdateInterval;
+        _posFixed = pos.FixedPosition;
+
+        var bt = lc.Bluetooth;
+        _btEnabled = bt.Enabled;
+        _btMode = bt.Mode;
+        _btFixedPin = bt.FixedPin;
+
+        var pwr = lc.Power;
+        _pwrSaving = pwr.IsPowerSaving;
+        _pwrShutdownSecs = pwr.OnBatteryShutdownAfterSecs;
+        _pwrWaitBtSecs = pwr.WaitBluetoothSecs;
+        _pwrLsSecs = pwr.LsSecs;
+        _pwrMinWakeSecs = pwr.MinWakeSecs;
+    }
+
+    private async Task SaveLora()
+    {
+        var lora = Mesh.Container.LocalConfig.Lora.Clone();
+        lora.Region = _loraRegion;
+        lora.UsePreset = _loraUsePreset;
+        lora.ModemPreset = _loraModemPreset;
+        lora.TxEnabled = _loraTxEnabled;
+        lora.TxPower = _loraTxPower;
+        lora.HopLimit = _loraHopLimit;
+        lora.Bandwidth = _loraBandwidth;
+        lora.SpreadFactor = _loraSpreadFactor;
+        lora.CodingRate = _loraCodingRate;
+        await Save(new Config { Lora = lora });
+    }
+
+    private async Task SaveDevice()
+    {
+        var dev = Mesh.Container.LocalConfig.Device.Clone();
+        dev.Role = _devRole;
+        dev.RebroadcastMode = _devRebroadcast;
+        dev.NodeInfoBroadcastSecs = _devNodeInfoSecs;
+        dev.Tzdef = _devTzdef;
+        dev.LedHeartbeatDisabled = _devLedDisabled;
+        await Save(new Config { Device = dev });
+    }
+
+    private async Task SavePosition()
+    {
+        var pos = Mesh.Container.LocalConfig.Position.Clone();
+        pos.GpsMode = _posGpsMode;
+        pos.PositionBroadcastSecs = _posBroadcastSecs;
+        pos.PositionBroadcastSmartEnabled = _posSmartEnabled;
+        pos.GpsUpdateInterval = _posGpsUpdateInterval;
+        pos.FixedPosition = _posFixed;
+        await Save(new Config { Position = pos });
+    }
+
+    private async Task SaveBluetooth()
+    {
+        var bt = Mesh.Container.LocalConfig.Bluetooth.Clone();
+        bt.Enabled = _btEnabled;
+        bt.Mode = _btMode;
+        bt.FixedPin = _btFixedPin;
+        await Save(new Config { Bluetooth = bt });
+    }
+
+    private async Task SavePower()
+    {
+        var pwr = Mesh.Container.LocalConfig.Power.Clone();
+        pwr.IsPowerSaving = _pwrSaving;
+        pwr.OnBatteryShutdownAfterSecs = _pwrShutdownSecs;
+        pwr.WaitBluetoothSecs = _pwrWaitBtSecs;
+        pwr.LsSecs = _pwrLsSecs;
+        pwr.MinWakeSecs = _pwrMinWakeSecs;
+        await Save(new Config { Power = pwr });
+    }
+
+    private async Task Save(Config config)
+    {
+        _busy = true;
+        _status = string.Empty;
+        try
+        {
+            await Mesh.SetConfigAsync(config);
+            _status = "Saved. Reconnect for changes to fully take effect.";
+            _statusOk = true;
+        }
+        catch (Exception ex)
+        {
+            _status = $"Error: {ex.Message}";
+            _statusOk = false;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    public void Dispose() => Mesh.StateChanged -= OnStateChanged;
+}

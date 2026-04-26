@@ -168,6 +168,33 @@ public class MeshtasticService : IDisposable
         }
     }
 
+    public async Task SetConfigAsync(Config config)
+    {
+        if (_connection == null || !IsConnected)
+            throw new InvalidOperationException("Not connected to a device");
+
+        await _sendLock.WaitAsync();
+        try
+        {
+            var factory = new AdminMessageFactory(Container);
+
+            var begin = factory.CreateBeginEditSettingsMessage();
+            await _connection.WriteToRadio(_connection.ToRadioFactory.CreateMeshPacketMessage(begin));
+
+            var setConfig = factory.CreateSetConfigMessage(config);
+            await _connection.WriteToRadio(_connection.ToRadioFactory.CreateMeshPacketMessage(setConfig));
+
+            var commit = factory.CreateCommitEditSettingsMessage();
+            await _connection.WriteToRadio(_connection.ToRadioFactory.CreateMeshPacketMessage(commit));
+
+            _logger.LogInformation("Config ({Type}) saved", config.PayloadVariantCase);
+        }
+        finally
+        {
+            _sendLock.Release();
+        }
+    }
+
     public async Task RebootAsync(int delaySeconds = 5)
     {
         if (_connection == null || !IsConnected)

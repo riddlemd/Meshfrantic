@@ -393,6 +393,35 @@ code {
     padding: 1em;
 }
 
+/* ── Config tabs ──────────────────────────────────────────────────── */
+.config-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--mesh-border-color);
+}
+
+.config-tab {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--mesh-secondary);
+    font-family: $font-monospace;
+    font-size: 0.85rem;
+    padding: 0.5rem 1.25rem;
+    cursor: pointer;
+    transition: color $transition-fast, border-color $transition-fast;
+    margin-bottom: -1px;
+
+    &:hover {
+        color: var(--mesh-primary);
+    }
+
+    &--active {
+        color: var(--mesh-primary);
+        border-bottom-color: var(--mesh-primary);
+    }
+}
+
 /* ── Utility ──────────────────────────────────────────────────────── */
 .text-success {
     color: var(--mesh-primary) !important;
