@@ -393,6 +393,38 @@ code {
     padding: 1em;
 }
 
+/* ── Node expand row ─────────────────────────────────────────────── */
+.node-expand-row td {
+    padding: 0 !important;
+    border-top: none !important;
+}
+
+.node-expand-body {
+    padding: 0.75rem 1rem;
+    background: color-mix(in srgb, var(--mesh-background) 85%, var(--mesh-border-color));
+    border-top: 1px solid var(--mesh-border-color);
+}
+
+.tel-group-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    color: var(--mesh-tertiary);
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+}
+
+.tel-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.82rem;
+    padding: 0.1rem 0;
+    color: var(--mesh-secondary);
+
+    strong {
+        color: var(--mesh-primary);
+    }
+}
+
 /* ── Config tabs ──────────────────────────────────────────────────── */
 .config-tabs {
     display: flex;

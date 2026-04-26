@@ -94,6 +94,9 @@ else
                             else { <span class="text-muted">—</span> }
                         </td>
                         <td class="text-end">
+                            <a class="action-link me-2" @onclick="() => ToggleExpand(node.Num)" @onclick:preventDefault>
+                                @(_expandedNode == node.Num ? "▲" : "▼")
+                            </a>
                             @if (!isOwn)
                             {
                                 @if (_confirmDeleteNum == node.Num)
@@ -109,6 +112,80 @@ else
                             }
                         </td>
                     </tr>
+                    @if (_expandedNode == node.Num)
+                    {
+                        <tr class="node-expand-row">
+                            <td colspan="10">
+                                @{
+                                    Mesh.NodeTelemetryMap.TryGetValue(node.Num, out var tel);
+                                }
+                                <div class="node-expand-body">
+                                    <div class="row g-2">
+                                        @if (tel != null)
+                                        {
+                                            @if (tel.ChannelUtilization.HasValue || tel.AirUtilTx.HasValue || tel.UptimeSeconds.HasValue)
+                                            {
+                                                <div class="col-md-4">
+                                                    <div class="tel-group-label">Radio</div>
+                                                    @if (tel.ChannelUtilization.HasValue)
+                                                    {
+                                                        <div class="tel-row"><span>Ch Util</span><strong>@tel.ChannelUtilization.Value.ToString("F1")%</strong></div>
+                                                    }
+                                                    @if (tel.AirUtilTx.HasValue)
+                                                    {
+                                                        <div class="tel-row"><span>Air Util TX</span><strong>@tel.AirUtilTx.Value.ToString("F1")%</strong></div>
+                                                    }
+                                                    @if (tel.UptimeSeconds.HasValue)
+                                                    {
+                                                        <div class="tel-row"><span>Uptime</span><strong>@FormatUptime(tel.UptimeSeconds.Value)</strong></div>
+                                                    }
+                                                </div>
+                                            }
+                                            @if (tel.Temperature.HasValue || tel.RelativeHumidity.HasValue || tel.BarometricPressure.HasValue)
+                                            {
+                                                <div class="col-md-4">
+                                                    <div class="tel-group-label">Environment</div>
+                                                    @if (tel.Temperature.HasValue)
+                                                    {
+                                                        <div class="tel-row"><span>Temperature</span><strong>@tel.Temperature.Value.ToString("F1") °C</strong></div>
+                                                    }
+                                                    @if (tel.RelativeHumidity.HasValue)
+                                                    {
+                                                        <div class="tel-row"><span>Humidity</span><strong>@tel.RelativeHumidity.Value.ToString("F1")%</strong></div>
+                                                    }
+                                                    @if (tel.BarometricPressure.HasValue)
+                                                    {
+                                                        <div class="tel-row"><span>Pressure</span><strong>@tel.BarometricPressure.Value.ToString("F1") hPa</strong></div>
+                                                    }
+                                                </div>
+                                            }
+                                            @if (tel.WindSpeed.HasValue || tel.Lux.HasValue)
+                                            {
+                                                <div class="col-md-4">
+                                                    <div class="tel-group-label">Other</div>
+                                                    @if (tel.WindSpeed.HasValue)
+                                                    {
+                                                        <div class="tel-row"><span>Wind</span><strong>@tel.WindSpeed.Value.ToString("F1") m/s @(tel.WindDirection.HasValue ? $"{tel.WindDirection}°" : "")</strong></div>
+                                                    }
+                                                    @if (tel.Lux.HasValue)
+                                                    {
+                                                        <div class="tel-row"><span>Light</span><strong>@tel.Lux.Value.ToString("F0") lux</strong></div>
+                                                    }
+                                                </div>
+                                            }
+                                            <div class="col-12">
+                                                <span class="text-muted" style="font-size:0.7rem">Last telemetry: @tel.LastUpdated.ToString("HH:mm:ss")</span>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="col-12 text-muted small">No telemetry received yet from this node.</div>
+                                        }
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    }
                 }
             </tbody>
         </table>
@@ -146,6 +223,10 @@ else
     private const int PageSize = 20;
     private int _currentPage = 1;
     private uint? _confirmDeleteNum;
+    private uint? _expandedNode;
+
+    private void ToggleExpand(uint nodeNum) =>
+        _expandedNode = _expandedNode == nodeNum ? null : nodeNum;
 
     protected override void OnInitialized() => Mesh.StateChanged += OnStateChanged;
 
@@ -204,6 +285,13 @@ else
         >= 0 => "text-warning",
         _ => "text-danger"
     };
+
+    private static string FormatUptime(uint secs)
+    {
+        if (secs < 60) return $"{secs}s";
+        if (secs < 3600) return $"{secs / 60}m {secs % 60}s";
+        return $"{secs / 3600}h {secs % 3600 / 60}m";
+    }
 
     private static string BatteryClass(uint pct) => pct switch
     {

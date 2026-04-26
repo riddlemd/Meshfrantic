@@ -83,6 +83,39 @@ else
         </div>
     }
 
+    @if (OwnNodeNum > 0 && Mesh.NodeTelemetryMap.TryGetValue(OwnNodeNum, out var ownTel) &&
+         (ownTel.Temperature.HasValue || ownTel.ChannelUtilization.HasValue))
+    {
+        <div class="card mb-4">
+            <div class="card__header fw-semibold">Telemetry</div>
+            <div class="card__body">
+                <div class="row">
+                    @if (ownTel.ChannelUtilization.HasValue || ownTel.AirUtilTx.HasValue)
+                    {
+                        <div class="col-md-4">
+                            <div class="info-row"><span>Ch Utilization</span><strong>@ownTel.ChannelUtilization?.ToString("F1")%</strong></div>
+                            <div class="info-row"><span>Air Util TX</span><strong>@ownTel.AirUtilTx?.ToString("F1")%</strong></div>
+                        </div>
+                    }
+                    @if (ownTel.Temperature.HasValue)
+                    {
+                        <div class="col-md-4">
+                            <div class="info-row"><span>Temperature</span><strong>@ownTel.Temperature?.ToString("F1") °C</strong></div>
+                            @if (ownTel.RelativeHumidity.HasValue)
+                            {
+                                <div class="info-row"><span>Humidity</span><strong>@ownTel.RelativeHumidity?.ToString("F1")%</strong></div>
+                            }
+                            @if (ownTel.BarometricPressure.HasValue)
+                            {
+                                <div class="info-row"><span>Pressure</span><strong>@ownTel.BarometricPressure?.ToString("F1") hPa</strong></div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+
     @if (Mesh.Messages.Any())
     {
         <div class="card">

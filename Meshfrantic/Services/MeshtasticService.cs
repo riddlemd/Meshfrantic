@@ -14,6 +14,7 @@ public class MeshtasticService : IDisposable
     private Task? _readTask;
     private readonly List<ChatMessage> _messages = [];
     private readonly Dictionary<uint, ChatMessage> _pendingAcks = [];
+    private readonly Dictionary<uint, NodeTelemetry> _nodeTelemetry = [];
     private readonly SemaphoreSlim _sendLock = new(1, 1);
 
     public event Action? StateChanged;
@@ -23,6 +24,7 @@ public class MeshtasticService : IDisposable
     public DeviceStateContainer Container { get; private set; } = new();
     public IReadOnlyList<string> AvailablePorts { get; private set; } = [];
     public IReadOnlyList<ChatMessage> Messages => _messages;
+    public IReadOnlyDictionary<uint, NodeTelemetry> NodeTelemetryMap => _nodeTelemetry;
 
     public MeshtasticService(ILogger<MeshtasticService> logger)
     {
@@ -49,6 +51,7 @@ public class MeshtasticService : IDisposable
             _connection = new SerialConnection(_logger, port, Container);
             _messages.Clear();
             _pendingAcks.Clear();
+            _nodeTelemetry.Clear();
             ConnectedPort = port;
             IsConnected = true;
 
@@ -352,6 +355,9 @@ public class MeshtasticService : IDisposable
             case PortNum.RoutingApp:
                 HandleRouting(packet);
                 break;
+            case PortNum.TelemetryApp:
+                HandleTelemetry(packet);
+                break;
         }
     }
 
@@ -378,6 +384,42 @@ public class MeshtasticService : IDisposable
             DestNodeId = destNodeId,
             PacketId = packet.Id
         });
+    }
+
+    private void HandleTelemetry(MeshPacket packet)
+    {
+        var telemetry = Telemetry.Parser.ParseFrom(packet.Decoded.Payload);
+        var nodeId = packet.From;
+
+        if (!_nodeTelemetry.TryGetValue(nodeId, out var record))
+        {
+            record = new NodeTelemetry();
+            _nodeTelemetry[nodeId] = record;
+        }
+
+        record.LastUpdated = DateTime.Now;
+
+        if (telemetry.DeviceMetrics is { } dev)
+        {
+            if (dev.BatteryLevel > 0) record.BatteryLevel = dev.BatteryLevel;
+            if (dev.Voltage > 0) record.Voltage = dev.Voltage;
+            if (dev.ChannelUtilization > 0) record.ChannelUtilization = dev.ChannelUtilization;
+            if (dev.AirUtilTx > 0) record.AirUtilTx = dev.AirUtilTx;
+            if (dev.UptimeSeconds > 0) record.UptimeSeconds = dev.UptimeSeconds;
+        }
+
+        if (telemetry.EnvironmentMetrics is { } env)
+        {
+            if (env.Temperature != 0) record.Temperature = env.Temperature;
+            if (env.RelativeHumidity != 0) record.RelativeHumidity = env.RelativeHumidity;
+            if (env.BarometricPressure != 0) record.BarometricPressure = env.BarometricPressure;
+            if (env.WindSpeed != 0) record.WindSpeed = env.WindSpeed;
+            if (env.WindDirection != 0) record.WindDirection = env.WindDirection;
+            if (env.Lux != 0) record.Lux = env.Lux;
+        }
+
+        _logger.LogDebug("Telemetry from node {NodeId}: DevMetrics={HasDev} EnvMetrics={HasEnv}",
+            nodeId, telemetry.DeviceMetrics != null, telemetry.EnvironmentMetrics != null);
     }
 
     private void HandleRouting(MeshPacket packet)
