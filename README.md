@@ -4,11 +4,18 @@ A .NET 10 Blazor Server application for interfacing with a [Meshtastic](https://
 
 ## Features
 
-- **Dashboard** — live stats: nodes seen, messages, channels, and connected device info (name, ID, position, hardware, firmware, battery)
-- **Messages** — real-time mesh chat with send support
-- **Nodes** — table of all nodes in the network with signal, position, and device info
+- **Dashboard** — live stats: nodes seen, messages, channels, and connected device info (name, ID, position, hardware, firmware, battery, telemetry)
+- **Messages** — channel-aware chat with a sidebar listing active channels and direct-message threads per node; message delivery ACK tracking (sent / delivered / failed)
+- **Nodes** — sortable table with expandable rows showing full node detail: position, telemetry (device metrics + environment sensors), and one-click traceroute request with hop-by-hop path display
+- **Channels** — manage all 8 channels: edit name, PSK, role, uplink/downlink; changes written to device immediately
+- **Map** — Leaflet map with node position markers, waypoint markers, and layer toggles (nodes / waypoints)
+- **Config** — tabbed device config editor: LoRa (region, modem preset, hop limit, TX power), Device (role, rebroadcast mode, timezone), Position (GPS mode, broadcast interval), Bluetooth, Power
+- **Module Config** — tabbed module config editor: Telemetry, MQTT, Store & Forward, Neighbor Info, External Notifications, Serial
 - **Commands** — device admin panel: request config, reboot, factory reset, node DB reset, rename device
-- **Themes** — four built-in terminal themes with localStorage persistence
+- **Logs** — live packet log
+- **Themes** — six built-in terminal themes with localStorage persistence
+
+> Meshfrantic covers everything in the official Meshtastic web client, plus device admin commands (reboot, factory reset, node DB reset) that the official client doesn't expose.
 
 ## Requirements
 
@@ -19,12 +26,12 @@ A .NET 10 Blazor Server application for interfacing with a [Meshtastic](https://
 ## Getting Started
 
 ```bash
-git clone https://github.com/yourname/meshfrantic
+git clone https://github.com/riddlemd/meshfrantic
 cd meshfrantic/Meshfrantic
 dotnet run
 ```
 
-Open `https://localhost:5001` in your browser.
+Open `https://localhost:5001` in your browser, select your COM port, and click **Connect**.
 
 ## Themes
 
@@ -57,20 +64,27 @@ Electric blue on cold steel
 
 ## Architecture
 
-Blazor Server
+Blazor Server — single `MeshtasticService` singleton drives the serial connection and exposes state to all pages via `StateChanged` events.
 
 | File | Role |
 |---|---|
-| `Services/MeshtasticService.cs` | Singleton: connection lifecycle, send commands, state events |
-| `Services/MeshtasticReaderService.cs` | `BackgroundService` that drives the read loop |
+| `Services/MeshtasticService.cs` | Singleton: connection lifecycle, read loop, packet dispatch, send methods |
 | `Services/ThemeService.cs` | Tracks active theme; switching is JS/localStorage-driven |
-| `Components/Layout/MainLayout.razor` | Connection toolbar (port select, connect/disconnect, theme) |
-| `Components/Pages/Home.razor` | Dashboard |
-| `Components/Pages/Messages.razor` | Chat UI |
-| `Components/Pages/Nodes.razor` | Node list |
+| `Components/Layout/MainLayout.razor` | Connection toolbar (port select, connect/disconnect, battery, theme) |
+| `Components/Pages/Home.razor` | Dashboard + own-device telemetry card |
+| `Components/Pages/Messages.razor` | Channel/DM sidebar, message list, ACK status icons |
+| `Components/Pages/Nodes.razor` | Node table with expandable detail + traceroute |
+| `Components/Pages/Channels.razor` | Channel management (name, PSK, role, uplink/downlink) |
+| `Components/Pages/Map.razor` | Leaflet map with node + waypoint layers |
+| `Components/Pages/DeviceConfig.razor` | Core radio config (LoRa, Device, Position, Bluetooth, Power) |
+| `Components/Pages/ModuleSettings.razor` | Module config (Telemetry, MQTT, Store & Forward, etc.) |
 | `Components/Pages/Commands.razor` | Admin commands |
+| `Components/Pages/Logs.razor` | Packet log |
+| `Models/ChatMessage.cs` | Per-message state including channel, ACK, and DM destination |
+| `Models/NodeTelemetry.cs` | Per-node telemetry accumulator (device + environment metrics) |
 
 ## Dependencies
 
 - [`Meshtastic`](https://www.nuget.org/packages/Meshtastic) 2.0.8 — C# client library for the Meshtastic protobuf protocol
+- [`LeafletForBlazor`](https://www.nuget.org/packages/LeafletForBlazor) — interactive map component
 - [`System.IO.Ports`](https://www.nuget.org/packages/System.IO.Ports) 10.0.6 — serial port access
