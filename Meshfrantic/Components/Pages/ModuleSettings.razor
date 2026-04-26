@@ -1,0 +1,481 @@
+@page "/moduleconfig"
+@using Meshtastic.Protobufs
+@using SerialBaud = Meshtastic.Protobufs.ModuleConfig.Types.SerialConfig.Types.Serial_Baud
+@using SerialMode = Meshtastic.Protobufs.ModuleConfig.Types.SerialConfig.Types.Serial_Mode
+@inject MeshtasticService Mesh
+@implements IDisposable
+
+<PageTitle>Meshfrantic — Module Config</PageTitle>
+
+<div class="px-4">
+<h2 class="mb-3">Module Config</h2>
+
+@if (!Mesh.IsConnected)
+{
+    <div class="alert alert-info">Connect to a device to configure modules.</div>
+}
+else
+{
+    <p class="text-muted small mb-3">Changes are written to the device immediately. Reconnect for all changes to take effect.</p>
+
+    <div class="config-tabs mb-4">
+        @foreach (var tab in new[] { ("telemetry","Telemetry"), ("mqtt","MQTT"), ("storeforward","Store & Forward"), ("neighborinfo","Neighbor Info"), ("extnotify","Ext. Notify"), ("serial","Serial") })
+        {
+            var t = tab;
+            <button class="config-tab @(_tab == t.Item1 ? "config-tab--active" : "")"
+                    @onclick="() => _tab = t.Item1">@t.Item2</button>
+        }
+    </div>
+
+    @if (!string.IsNullOrEmpty(_status))
+    {
+        <div class="small mb-3 @(_statusOk ? "text-success" : "text-danger")">@_status</div>
+    }
+
+    @if (_tab == "telemetry")
+    {
+        <div class="row g-3">
+            <div class="col-12 d-flex gap-4 flex-wrap">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="tel-device" @bind="_telDeviceEnabled" disabled="@_busy" />
+                    <label class="form-check-label" for="tel-device">Device Telemetry</label>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="tel-env" @bind="_telEnvEnabled" disabled="@_busy" />
+                    <label class="form-check-label" for="tel-env">Environment Sensors</label>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="tel-air" @bind="_telAirEnabled" disabled="@_busy" />
+                    <label class="form-check-label" for="tel-air">Air Quality</label>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Device Update Interval (secs)</label>
+                <input class="form-control" type="number" min="0" @bind="_telDeviceInterval" disabled="@_busy" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Environment Update Interval (secs)</label>
+                <input class="form-control" type="number" min="0" @bind="_telEnvInterval" disabled="@_busy" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Air Quality Interval (secs)</label>
+                <input class="form-control" type="number" min="0" @bind="_telAirInterval" disabled="@_busy" />
+            </div>
+        </div>
+        <div class="mt-3">
+            <button class="btn btn-primary btn-sm" @onclick="SaveTelemetry" disabled="@_busy">
+                @(_busy ? "Saving..." : "Save Telemetry")
+            </button>
+        </div>
+    }
+
+    @if (_tab == "mqtt")
+    {
+        <div class="row g-3">
+            <div class="col-12 d-flex gap-4 flex-wrap">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="mqtt-enabled" @bind="_mqttEnabled" disabled="@_busy" />
+                    <label class="form-check-label" for="mqtt-enabled">MQTT Enabled</label>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="mqtt-tls" @bind="_mqttTls" disabled="@_busy" />
+                    <label class="form-check-label" for="mqtt-tls">TLS</label>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="mqtt-json" @bind="_mqttJson" disabled="@_busy" />
+                    <label class="form-check-label" for="mqtt-json">JSON Output</label>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="mqtt-encrypt" @bind="_mqttEncrypt" disabled="@_busy" />
+                    <label class="form-check-label" for="mqtt-encrypt">Encrypt</label>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="mqtt-map" @bind="_mqttMapReporting" disabled="@_busy" />
+                    <label class="form-check-label" for="mqtt-map">Map Reporting</label>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Server Address</label>
+                <input class="form-control" @bind="_mqttAddress" placeholder="mqtt.meshtastic.org" disabled="@_busy" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Username</label>
+                <input class="form-control" @bind="_mqttUsername" disabled="@_busy" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Password</label>
+                <input class="form-control" type="password" @bind="_mqttPassword" disabled="@_busy" />
+            </div>
+        </div>
+        <div class="mt-3">
+            <button class="btn btn-primary btn-sm" @onclick="SaveMqtt" disabled="@_busy">
+                @(_busy ? "Saving..." : "Save MQTT")
+            </button>
+        </div>
+    }
+
+    @if (_tab == "storeforward")
+    {
+        <div class="row g-3">
+            <div class="col-12 d-flex gap-4 flex-wrap">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="sf-enabled" @bind="_sfEnabled" disabled="@_busy" />
+                    <label class="form-check-label" for="sf-enabled">Enabled</label>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="sf-server" @bind="_sfIsServer" disabled="@_busy" />
+                    <label class="form-check-label" for="sf-server">Act as Server</label>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="sf-heartbeat" @bind="_sfHeartbeat" disabled="@_busy" />
+                    <label class="form-check-label" for="sf-heartbeat">Heartbeat</label>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Max Records</label>
+                <input class="form-control" type="number" min="0" @bind="_sfRecords" disabled="@_busy" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">History Return Max</label>
+                <input class="form-control" type="number" min="0" @bind="_sfHistoryMax" disabled="@_busy" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">History Return Window (secs)</label>
+                <input class="form-control" type="number" min="0" @bind="_sfHistoryWindow" disabled="@_busy" />
+            </div>
+        </div>
+        <div class="mt-3">
+            <button class="btn btn-primary btn-sm" @onclick="SaveStoreForward" disabled="@_busy">
+                @(_busy ? "Saving..." : "Save Store & Forward")
+            </button>
+        </div>
+    }
+
+    @if (_tab == "neighborinfo")
+    {
+        <div class="row g-3">
+            <div class="col-12 d-flex gap-4 flex-wrap">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="ni-enabled" @bind="_niEnabled" disabled="@_busy" />
+                    <label class="form-check-label" for="ni-enabled">Enabled</label>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="ni-transmit" @bind="_niTransmitOverLora" disabled="@_busy" />
+                    <label class="form-check-label" for="ni-transmit">Transmit over LoRa</label>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Update Interval (secs)</label>
+                <input class="form-control" type="number" min="0" @bind="_niInterval" disabled="@_busy" />
+            </div>
+        </div>
+        <div class="mt-3">
+            <button class="btn btn-primary btn-sm" @onclick="SaveNeighborInfo" disabled="@_busy">
+                @(_busy ? "Saving..." : "Save Neighbor Info")
+            </button>
+        </div>
+    }
+
+    @if (_tab == "extnotify")
+    {
+        <div class="row g-3">
+            <div class="col-12 d-flex gap-4 flex-wrap">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="en-enabled" @bind="_enEnabled" disabled="@_busy" />
+                    <label class="form-check-label" for="en-enabled">Enabled</label>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="en-msg" @bind="_enAlertMessage" disabled="@_busy" />
+                    <label class="form-check-label" for="en-msg">Alert on Message</label>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="en-bell" @bind="_enAlertBell" disabled="@_busy" />
+                    <label class="form-check-label" for="en-bell">Alert on Bell</label>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="en-pwm" @bind="_enUsePwm" disabled="@_busy" />
+                    <label class="form-check-label" for="en-pwm">Use PWM</label>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Output Duration (ms)</label>
+                <input class="form-control" type="number" min="0" @bind="_enOutputMs" disabled="@_busy" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Nag Timeout (secs)</label>
+                <input class="form-control" type="number" min="0" @bind="_enNagTimeout" disabled="@_busy" />
+            </div>
+        </div>
+        <div class="mt-3">
+            <button class="btn btn-primary btn-sm" @onclick="SaveExtNotify" disabled="@_busy">
+                @(_busy ? "Saving..." : "Save Ext. Notify")
+            </button>
+        </div>
+    }
+
+    @if (_tab == "serial")
+    {
+        <div class="row g-3">
+            <div class="col-12 d-flex gap-4 flex-wrap">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="ser-enabled" @bind="_serEnabled" disabled="@_busy" />
+                    <label class="form-check-label" for="ser-enabled">Enabled</label>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="ser-echo" @bind="_serEcho" disabled="@_busy" />
+                    <label class="form-check-label" for="ser-echo">Echo</label>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Baud Rate</label>
+                <select class="form-select" @bind="_serBaud" disabled="@_busy">
+                    @foreach (var v in Enum.GetValues<SerialBaud>())
+                    {
+                        <option value="@v">@v</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Mode</label>
+                <select class="form-select" @bind="_serMode" disabled="@_busy">
+                    @foreach (var v in Enum.GetValues<SerialMode>())
+                    {
+                        <option value="@v">@v</option>
+                    }
+                </select>
+            </div>
+        </div>
+        <div class="mt-3">
+            <button class="btn btn-primary btn-sm" @onclick="SaveSerial" disabled="@_busy">
+                @(_busy ? "Saving..." : "Save Serial")
+            </button>
+        </div>
+    }
+}
+</div>
+
+@code {
+    private string _tab = "telemetry";
+    private bool _busy;
+    private string _status = string.Empty;
+    private bool _statusOk;
+
+    // Telemetry
+    private bool _telDeviceEnabled;
+    private bool _telEnvEnabled;
+    private bool _telAirEnabled;
+    private uint _telDeviceInterval;
+    private uint _telEnvInterval;
+    private uint _telAirInterval;
+
+    // MQTT
+    private bool _mqttEnabled;
+    private bool _mqttTls;
+    private bool _mqttJson;
+    private bool _mqttEncrypt;
+    private bool _mqttMapReporting;
+    private string _mqttAddress = string.Empty;
+    private string _mqttUsername = string.Empty;
+    private string _mqttPassword = string.Empty;
+
+    // Store & Forward
+    private bool _sfEnabled;
+    private bool _sfIsServer;
+    private bool _sfHeartbeat;
+    private uint _sfRecords;
+    private uint _sfHistoryMax;
+    private uint _sfHistoryWindow;
+
+    // Neighbor Info
+    private bool _niEnabled;
+    private bool _niTransmitOverLora;
+    private uint _niInterval;
+
+    // External Notifications
+    private bool _enEnabled;
+    private bool _enAlertMessage;
+    private bool _enAlertBell;
+    private bool _enUsePwm;
+    private uint _enOutputMs;
+    private uint _enNagTimeout;
+
+    // Serial
+    private bool _serEnabled;
+    private bool _serEcho;
+    private SerialBaud _serBaud;
+    private SerialMode _serMode;
+
+    protected override void OnInitialized()
+    {
+        Mesh.StateChanged += OnStateChanged;
+        LoadFromConfig();
+    }
+
+    private void OnStateChanged()
+    {
+        LoadFromConfig();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void LoadFromConfig()
+    {
+        if (!Mesh.IsConnected) return;
+        var lmc = Mesh.Container.LocalModuleConfig;
+
+        var tel = lmc.Telemetry;
+        _telDeviceEnabled = tel.DeviceTelemetryEnabled;
+        _telEnvEnabled = tel.EnvironmentMeasurementEnabled;
+        _telAirEnabled = tel.AirQualityEnabled;
+        _telDeviceInterval = tel.DeviceUpdateInterval;
+        _telEnvInterval = tel.EnvironmentUpdateInterval;
+        _telAirInterval = tel.AirQualityInterval;
+
+        var mqtt = lmc.Mqtt;
+        _mqttEnabled = mqtt.Enabled;
+        _mqttTls = mqtt.TlsEnabled;
+        _mqttJson = mqtt.JsonEnabled;
+        _mqttEncrypt = mqtt.EncryptionEnabled;
+        _mqttMapReporting = mqtt.MapReportingEnabled;
+        _mqttAddress = mqtt.Address;
+        _mqttUsername = mqtt.Username;
+        _mqttPassword = mqtt.Password;
+
+        var sf = lmc.StoreForward;
+        _sfEnabled = sf.Enabled;
+        _sfIsServer = sf.IsServer;
+        _sfHeartbeat = sf.Heartbeat;
+        _sfRecords = sf.Records;
+        _sfHistoryMax = sf.HistoryReturnMax;
+        _sfHistoryWindow = sf.HistoryReturnWindow;
+
+        var ni = lmc.NeighborInfo;
+        _niEnabled = ni.Enabled;
+        _niTransmitOverLora = ni.TransmitOverLora;
+        _niInterval = ni.UpdateInterval;
+
+        var en = lmc.ExternalNotification;
+        _enEnabled = en.Enabled;
+        _enAlertMessage = en.AlertMessage;
+        _enAlertBell = en.AlertBell;
+        _enUsePwm = en.UsePwm;
+        _enOutputMs = en.OutputMs;
+        _enNagTimeout = en.NagTimeout;
+
+        var ser = lmc.Serial;
+        _serEnabled = ser.Enabled;
+        _serEcho = ser.Echo;
+        _serBaud = ser.Baud;
+        _serMode = ser.Mode;
+    }
+
+    private async Task SaveTelemetry()
+    {
+        var tel = Mesh.Container.LocalModuleConfig.Telemetry.Clone();
+        tel.DeviceTelemetryEnabled = _telDeviceEnabled;
+        tel.EnvironmentMeasurementEnabled = _telEnvEnabled;
+        tel.AirQualityEnabled = _telAirEnabled;
+        tel.DeviceUpdateInterval = _telDeviceInterval;
+        tel.EnvironmentUpdateInterval = _telEnvInterval;
+        tel.AirQualityInterval = _telAirInterval;
+        await Save(new ModuleConfig { Telemetry = tel });
+    }
+
+    private async Task SaveMqtt()
+    {
+        var mqtt = Mesh.Container.LocalModuleConfig.Mqtt.Clone();
+        mqtt.Enabled = _mqttEnabled;
+        mqtt.TlsEnabled = _mqttTls;
+        mqtt.JsonEnabled = _mqttJson;
+        mqtt.EncryptionEnabled = _mqttEncrypt;
+        mqtt.MapReportingEnabled = _mqttMapReporting;
+        mqtt.Address = _mqttAddress;
+        mqtt.Username = _mqttUsername;
+        mqtt.Password = _mqttPassword;
+        await Save(new ModuleConfig { Mqtt = mqtt });
+    }
+
+    private async Task SaveStoreForward()
+    {
+        var sf = Mesh.Container.LocalModuleConfig.StoreForward.Clone();
+        sf.Enabled = _sfEnabled;
+        sf.IsServer = _sfIsServer;
+        sf.Heartbeat = _sfHeartbeat;
+        sf.Records = _sfRecords;
+        sf.HistoryReturnMax = _sfHistoryMax;
+        sf.HistoryReturnWindow = _sfHistoryWindow;
+        await Save(new ModuleConfig { StoreForward = sf });
+    }
+
+    private async Task SaveNeighborInfo()
+    {
+        var ni = Mesh.Container.LocalModuleConfig.NeighborInfo.Clone();
+        ni.Enabled = _niEnabled;
+        ni.TransmitOverLora = _niTransmitOverLora;
+        ni.UpdateInterval = _niInterval;
+        await Save(new ModuleConfig { NeighborInfo = ni });
+    }
+
+    private async Task SaveExtNotify()
+    {
+        var en = Mesh.Container.LocalModuleConfig.ExternalNotification.Clone();
+        en.Enabled = _enEnabled;
+        en.AlertMessage = _enAlertMessage;
+        en.AlertBell = _enAlertBell;
+        en.UsePwm = _enUsePwm;
+        en.OutputMs = _enOutputMs;
+        en.NagTimeout = _enNagTimeout;
+        await Save(new ModuleConfig { ExternalNotification = en });
+    }
+
+    private async Task SaveSerial()
+    {
+        var ser = Mesh.Container.LocalModuleConfig.Serial.Clone();
+        ser.Enabled = _serEnabled;
+        ser.Echo = _serEcho;
+        ser.Baud = _serBaud;
+        ser.Mode = _serMode;
+        await Save(new ModuleConfig { Serial = ser });
+    }
+
+    private async Task Save(ModuleConfig config)
+    {
+        _busy = true;
+        _status = string.Empty;
+        try
+        {
+            await Mesh.SetModuleConfigAsync(config);
+            _status = "Saved. Reconnect for changes to fully take effect.";
+            _statusOk = true;
+        }
+        catch (Exception ex)
+        {
+            _status = $"Error: {ex.Message}";
+            _statusOk = false;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    public void Dispose() => Mesh.StateChanged -= OnStateChanged;
+}
