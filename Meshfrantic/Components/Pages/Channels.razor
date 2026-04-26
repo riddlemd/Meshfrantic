@@ -1,0 +1,262 @@
+@page "/channels"
+@using Meshtastic.Protobufs
+@using Google.Protobuf
+@inject MeshtasticService Mesh
+@implements IDisposable
+
+<PageTitle>Meshfrantic — Channels</PageTitle>
+
+<div class="px-4">
+<h2 class="mb-3">Channels</h2>
+
+@if (!Mesh.IsConnected)
+{
+    <div class="alert alert-info">Connect to a device to manage channels.</div>
+}
+else if (!Mesh.Container.Channels.Any())
+{
+    <div class="alert alert-info">
+        No channel data received yet. Use <a href="commands">Request Config</a> to load it.
+    </div>
+}
+else
+{
+    <p class="text-muted small mb-3">
+        Up to 8 channels (1 primary + 7 secondary). Changes are written to the device immediately.
+    </p>
+
+    <div class="d-flex flex-column gap-2">
+        @foreach (var ch in Mesh.Container.Channels.OrderBy(c => c.Index))
+        {
+            var idx = ch.Index;
+            var isEditing = _editingIndex == idx;
+
+            <div class="card">
+                <div class="card__header d-flex justify-content-between align-items-center">
+                    <span>
+                        <span class="text-muted me-2 small">#@idx</span>
+                        <strong>@GetChannelName(ch)</strong>
+                        <span class="badge ms-2 channel-badge channel-badge--@ch.Role.ToString().ToLower()">
+                            @ch.Role.ToString().ToUpper()
+                        </span>
+                    </span>
+                    @if (!isEditing && !_busy)
+                    {
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => StartEdit(idx)">Edit</button>
+                    }
+                </div>
+
+                @if (isEditing)
+                {
+                    <div class="card__body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Name</label>
+                                <input class="form-control" @bind="_editName"
+                                       placeholder="e.g. LongFast" maxlength="11"
+                                       disabled="@_busy" />
+                                <div class="form-text">Max 11 characters</div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Role</label>
+                                <select class="form-select" @bind="_editRole"
+                                        disabled="@(_busy || idx == 0)">
+                                    @foreach (var role in Enum.GetValues<Channel.Types.Role>())
+                                    {
+                                        <option value="@role">@role</option>
+                                    }
+                                </select>
+                                @if (idx == 0)
+                                {
+                                    <div class="form-text">Channel 0 is always primary</div>
+                                }
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label">PSK (base64)</label>
+                                <div class="input-group">
+                                    <input class="form-control" @bind="_editPsk"
+                                           placeholder="AQ== = default key, empty = no encryption"
+                                           type="@(_showPsk ? "text" : "password")"
+                                           disabled="@_busy" />
+                                    <button class="btn btn-outline-secondary" type="button"
+                                            @onclick="() => _showPsk = !_showPsk">
+                                        @(_showPsk ? "Hide" : "Show")
+                                    </button>
+                                </div>
+                                <div class="form-text">Leave empty for no encryption. AQ== is the default shared key.</div>
+                            </div>
+                            <div class="col-12 d-flex gap-4 flex-wrap">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch"
+                                           id="uplink-@idx" @bind="_editUplink" disabled="@_busy" />
+                                    <label class="form-check-label" for="uplink-@idx">Uplink enabled</label>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch"
+                                           id="downlink-@idx" @bind="_editDownlink" disabled="@_busy" />
+                                    <label class="form-check-label" for="downlink-@idx">Downlink enabled</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 mt-3 align-items-center">
+                            <button class="btn btn-primary btn-sm" @onclick="SaveChannel" disabled="@_busy">
+                                @(_busy ? "Saving..." : "Save")
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm" @onclick="CancelEdit" disabled="@_busy">
+                                Cancel
+                            </button>
+                            @if (!string.IsNullOrEmpty(_statusMessage))
+                            {
+                                <span class="small @(_statusSuccess ? "text-success" : "text-danger")">
+                                    @_statusMessage
+                                </span>
+                            }
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="card__body py-2">
+                        <div class="row g-2 align-items-center">
+                            <div class="col-md-4">
+                                <span class="text-muted small">Name: </span>
+                                <span>@(string.IsNullOrEmpty(ch.Settings?.Name) ? "(default)" : ch.Settings.Name)</span>
+                            </div>
+                            <div class="col-md-4">
+                                <span class="text-muted small">PSK: </span>
+                                <span>@GetPskDisplay(ch)</span>
+                            </div>
+                            <div class="col-md-4 d-flex gap-3">
+                                <span class="small @(ch.Settings?.UplinkEnabled == true ? "" : "text-muted")">
+                                    ↑ Uplink @(ch.Settings?.UplinkEnabled == true ? "on" : "off")
+                                </span>
+                                <span class="small @(ch.Settings?.DownlinkEnabled == true ? "" : "text-muted")">
+                                    ↓ Downlink @(ch.Settings?.DownlinkEnabled == true ? "on" : "off")
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    @if (!_editingIndex.HasValue && !string.IsNullOrEmpty(_statusMessage))
+    {
+        <div class="mt-3 small @(_statusSuccess ? "text-success" : "text-danger")">@_statusMessage</div>
+    }
+}
+</div>
+
+@code {
+    private int? _editingIndex;
+    private string _editName = string.Empty;
+    private Channel.Types.Role _editRole;
+    private string _editPsk = string.Empty;
+    private bool _editUplink;
+    private bool _editDownlink;
+    private bool _showPsk;
+    private bool _busy;
+    private string _statusMessage = string.Empty;
+    private bool _statusSuccess;
+
+    protected override void OnInitialized() => Mesh.StateChanged += OnStateChanged;
+    private void OnStateChanged() => InvokeAsync(StateHasChanged);
+
+    private string GetChannelName(Channel ch) =>
+        !string.IsNullOrEmpty(ch.Settings?.Name) ? ch.Settings.Name :
+        ch.Role == Channel.Types.Role.Primary ? "Primary" : $"Channel {ch.Index}";
+
+    private string GetPskDisplay(Channel ch)
+    {
+        var psk = ch.Settings?.Psk;
+        if (psk == null || psk.IsEmpty) return "None";
+        var b64 = Convert.ToBase64String(psk.ToByteArray());
+        return b64 == "AQ==" ? "Default" : b64[..Math.Min(8, b64.Length)] + "…";
+    }
+
+    private void StartEdit(int index)
+    {
+        var ch = Mesh.Container.Channels.FirstOrDefault(c => c.Index == index);
+        if (ch == null) return;
+
+        _editingIndex = index;
+        _editName = ch.Settings?.Name ?? string.Empty;
+        _editRole = index == 0 ? Channel.Types.Role.Primary : ch.Role;
+        _editPsk = ch.Settings?.Psk is { IsEmpty: false } psk
+            ? Convert.ToBase64String(psk.ToByteArray())
+            : string.Empty;
+        _editUplink = ch.Settings?.UplinkEnabled ?? false;
+        _editDownlink = ch.Settings?.DownlinkEnabled ?? false;
+        _showPsk = false;
+        _statusMessage = string.Empty;
+    }
+
+    private void CancelEdit()
+    {
+        _editingIndex = null;
+        _statusMessage = string.Empty;
+    }
+
+    private async Task SaveChannel()
+    {
+        if (_editingIndex == null) return;
+
+        var originalCh = Mesh.Container.Channels.FirstOrDefault(c => c.Index == _editingIndex);
+        if (originalCh == null) return;
+
+        ByteString psk;
+        if (string.IsNullOrWhiteSpace(_editPsk))
+        {
+            psk = ByteString.Empty;
+        }
+        else
+        {
+            try { psk = ByteString.CopyFrom(Convert.FromBase64String(_editPsk.Trim())); }
+            catch (FormatException)
+            {
+                _statusMessage = "PSK must be valid base64.";
+                _statusSuccess = false;
+                return;
+            }
+        }
+
+        var settings = new ChannelSettings
+        {
+            Name = _editName.Trim(),
+            Psk = psk,
+            UplinkEnabled = _editUplink,
+            DownlinkEnabled = _editDownlink,
+            Id = originalCh.Settings?.Id ?? 0
+        };
+
+        var updated = new Channel
+        {
+            Index = _editingIndex.Value,
+            Role = _editingIndex.Value == 0 ? Channel.Types.Role.Primary : _editRole,
+            Settings = settings
+        };
+
+        _busy = true;
+        _statusMessage = string.Empty;
+        try
+        {
+            await Mesh.SetChannelAsync(updated);
+            _statusMessage = "Saved. Reconnect the device for changes to take effect.";
+            _statusSuccess = true;
+            _editingIndex = null;
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = $"Error: {ex.Message}";
+            _statusSuccess = false;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    public void Dispose() => Mesh.StateChanged -= OnStateChanged;
+}

@@ -13,6 +13,7 @@ public class MeshtasticService : IDisposable
     private CancellationTokenSource? _readCts;
     private Task? _readTask;
     private readonly List<ChatMessage> _messages = [];
+    private readonly Dictionary<uint, ChatMessage> _pendingAcks = [];
     private readonly SemaphoreSlim _sendLock = new(1, 1);
 
     public event Action? StateChanged;
@@ -47,6 +48,7 @@ public class MeshtasticService : IDisposable
             Container = new DeviceStateContainer();
             _connection = new SerialConnection(_logger, port, Container);
             _messages.Clear();
+            _pendingAcks.Clear();
             ConnectedPort = port;
             IsConnected = true;
 
@@ -94,7 +96,7 @@ public class MeshtasticService : IDisposable
         _logger.LogInformation("Disconnected from Meshtastic device");
     }
 
-    public async Task SendTextMessageAsync(string text, uint? destNodeId = null)
+    public async Task SendTextMessageAsync(string text, uint channel = 0, uint? destNodeId = null)
     {
         if (_connection == null || !IsConnected)
             throw new InvalidOperationException("Not connected to a device");
@@ -103,28 +105,62 @@ public class MeshtasticService : IDisposable
         try
         {
             var factory = new TextMessageFactory(Container, destNodeId);
-            var packet = factory.CreateTextMessagePacket(text);
+            var packet = factory.CreateTextMessagePacket(text, channel);
             var toRadio = _connection.ToRadioFactory.CreateMeshPacketMessage(packet);
             await _connection.WriteToRadio(toRadio);
 
             var ownNodeNum = Container.MyNodeInfo?.MyNodeNum ?? 0;
-            _logger.LogInformation("Message sent from node {NodeId} to {DestNode}: {MessageLength} bytes",
-                ownNodeNum, destNodeId ?? 0, text.Length);
+            _logger.LogInformation("Message sent from node {NodeId} to {DestNode} on channel {Channel}: {MessageLength} bytes",
+                ownNodeNum, destNodeId ?? 0, channel, text.Length);
 
-            _messages.Add(new ChatMessage
+            var msg = new ChatMessage
             {
                 Text = text,
                 FromNodeId = ownNodeNum,
                 FromNodeName = Container.GetNodeDisplayName(ownNodeNum),
-                IsOwn = true
-            });
+                IsOwn = true,
+                ChannelIndex = (int)channel,
+                DestNodeId = destNodeId,
+                PacketId = packet.Id
+            };
 
+            if (packet.Id != 0)
+                _pendingAcks[packet.Id] = msg;
+
+            _messages.Add(msg);
             StateChanged?.Invoke();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to send message to node {DestNode}", destNodeId ?? 0);
             throw;
+        }
+        finally
+        {
+            _sendLock.Release();
+        }
+    }
+
+    public async Task SetChannelAsync(Channel channel)
+    {
+        if (_connection == null || !IsConnected)
+            throw new InvalidOperationException("Not connected to a device");
+
+        await _sendLock.WaitAsync();
+        try
+        {
+            var factory = new AdminMessageFactory(Container);
+
+            var begin = factory.CreateBeginEditSettingsMessage();
+            await _connection.WriteToRadio(_connection.ToRadioFactory.CreateMeshPacketMessage(begin));
+
+            var setChannel = factory.CreateSetChannelMessage(channel);
+            await _connection.WriteToRadio(_connection.ToRadioFactory.CreateMeshPacketMessage(setChannel));
+
+            var commit = factory.CreateCommitEditSettingsMessage();
+            await _connection.WriteToRadio(_connection.ToRadioFactory.CreateMeshPacketMessage(commit));
+
+            _logger.LogInformation("Channel {Index} saved (role={Role})", channel.Index, channel.Role);
         }
         finally
         {
@@ -225,7 +261,7 @@ public class MeshtasticService : IDisposable
                 wantConfig,
                 async (FromRadio fromRadio, DeviceStateContainer container) =>
                 {
-                    ExtractTextMessages(fromRadio);
+                    ProcessFromRadio(fromRadio);
                     StateChanged?.Invoke();
                     return ct.IsCancellationRequested;
                 }
@@ -246,30 +282,64 @@ public class MeshtasticService : IDisposable
         _logger.LogInformation("Read loop ended");
     }
 
-    private void ExtractTextMessages(FromRadio fromRadio)
+    private void ProcessFromRadio(FromRadio fromRadio)
     {
         if (fromRadio.PayloadVariantCase != FromRadio.PayloadVariantOneofCase.Packet)
             return;
 
         var packet = fromRadio.Packet;
-        if (packet?.Decoded?.Portnum != PortNum.TextMessageApp)
-            return;
+        if (packet?.Decoded == null) return;
 
+        switch (packet.Decoded.Portnum)
+        {
+            case PortNum.TextMessageApp:
+                HandleTextMessage(packet);
+                break;
+            case PortNum.RoutingApp:
+                HandleRouting(packet);
+                break;
+        }
+    }
+
+    private void HandleTextMessage(MeshPacket packet)
+    {
         var text = packet.Decoded.Payload.ToStringUtf8();
         var fromNodeId = packet.From;
         var nodeName = Container.GetNodeDisplayName(fromNodeId);
         var ownNodeNum = Container.MyNodeInfo?.MyNodeNum ?? 0;
 
-        _logger.LogDebug("Message received from node {FromNodeId} ({NodeName}): {MessageLength} bytes",
-            fromNodeId, nodeName, text.Length);
+        // 0xFFFFFFFF is the broadcast address; anything else is a DM
+        uint? destNodeId = packet.To != 0xFFFFFFFF && packet.To != 0 ? packet.To : null;
+
+        _logger.LogDebug("Message received from node {FromNodeId} ({NodeName}) on channel {Channel}: {MessageLength} bytes",
+            fromNodeId, nodeName, packet.Channel, text.Length);
 
         _messages.Add(new ChatMessage
         {
             Text = text,
             FromNodeId = fromNodeId,
             FromNodeName = nodeName,
-            IsOwn = fromNodeId == ownNodeNum && ownNodeNum != 0
+            IsOwn = fromNodeId == ownNodeNum && ownNodeNum != 0,
+            ChannelIndex = (int)packet.Channel,
+            DestNodeId = destNodeId,
+            PacketId = packet.Id
         });
+    }
+
+    private void HandleRouting(MeshPacket packet)
+    {
+        var requestId = packet.Decoded.RequestId;
+        if (requestId == 0 || !_pendingAcks.TryGetValue(requestId, out var pendingMsg))
+            return;
+
+        var routing = Routing.Parser.ParseFrom(packet.Decoded.Payload);
+        if (routing.ErrorReason == Routing.Types.Error.None)
+            pendingMsg.IsAcked = true;
+        else
+            pendingMsg.IsFailed = true;
+
+        _pendingAcks.Remove(requestId);
+        _logger.LogDebug("ACK received for packet {PacketId}: {Error}", requestId, routing.ErrorReason);
     }
 
     public void Dispose()

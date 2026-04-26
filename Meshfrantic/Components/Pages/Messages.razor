@@ -1,11 +1,12 @@
 @page "/messages"
+@using Meshtastic.Protobufs
 @inject MeshtasticService Mesh
 @inject IJSRuntime JS
 @implements IDisposable
 
 <PageTitle>Meshfrantic — Messages</PageTitle>
 
-<div class="px-4">
+<div class="messages-page px-4">
 <h2 class="mb-3">Messages</h2>
 
 @if (!Mesh.IsConnected)
@@ -14,57 +15,198 @@
 }
 else
 {
-    <div class="chat-container d-flex flex-column">
-        <div class="chat-messages flex-grow-1 messages__scroll">
-            @if (!Mesh.Messages.Any())
-            {
-                <div class="text-center text-muted py-5">No messages yet. Send one below!</div>
-            }
-            else
-            {
-                @foreach (var msg in Mesh.Messages)
+    <div class="messages-layout">
+        <!-- Sidebar -->
+        <div class="messages-sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-label">CHANNELS</div>
+                @foreach (var ch in ActiveChannels)
                 {
-                    <div class="chat-bubble-wrap @(msg.IsOwn ? "own" : "other")">
-                        @if (!msg.IsOwn)
+                    var chIdx = ch.Index;
+                    var chName = GetChannelLabel(ch);
+                    var unread = UnreadCount("channel", chIdx, 0);
+                    <button class="sidebar-item @(_viewMode == "channel" && _selectedChannelIndex == chIdx ? "sidebar-item--active" : "")"
+                            @onclick="() => SelectChannel(chIdx)">
+                        <span class="sidebar-item__name">@chName</span>
+                        @if (unread > 0)
                         {
-                            <div class="chat-sender">@msg.FromNodeName</div>
+                            <span class="sidebar-item__badge">@unread</span>
                         }
-                        <div class="chat-bubble">
-                            <div class="chat-text">@msg.Text</div>
-                            <div class="chat-time">@msg.Timestamp.ToString("HH:mm:ss")</div>
+                    </button>
+                }
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-label">DIRECT MESSAGES</div>
+                @foreach (var nodeId in DmNodeIds)
+                {
+                    var id = nodeId;
+                    var name = Mesh.Container.GetNodeDisplayName(id);
+                    var unread = UnreadCount("dm", 0, id);
+                    <button class="sidebar-item @(_viewMode == "dm" && _selectedDmNodeId == id ? "sidebar-item--active" : "")"
+                            @onclick="() => SelectDm(id)">
+                        <span class="sidebar-item__name">@name</span>
+                        @if (unread > 0)
+                        {
+                            <span class="sidebar-item__badge">@unread</span>
+                        }
+                    </button>
+                }
+
+                @if (_showNewDm)
+                {
+                    <div class="sidebar-new-dm">
+                        <select class="form-select form-select-sm" @bind="_newDmNodeId">
+                            <option value="0">Select node…</option>
+                            @foreach (var node in OtherNodes)
+                            {
+                                <option value="@node.Num">@Mesh.Container.GetNodeDisplayName(node.Num)</option>
+                            }
+                        </select>
+                        <div class="d-flex gap-1 mt-1">
+                            <button class="btn btn-sm btn-primary" @onclick="StartNewDm"
+                                    disabled="@(_newDmNodeId == 0)">Go</button>
+                            <button class="btn btn-sm btn-outline-secondary"
+                                    @onclick="() => _showNewDm = false">✕</button>
                         </div>
                     </div>
                 }
+                else
+                {
+                    <button class="sidebar-item sidebar-item--new" @onclick="() => _showNewDm = true">
+                        + New DM
+                    </button>
+                }
+            </div>
+        </div>
+
+        <!-- Main chat area -->
+        <div class="messages-main d-flex flex-column">
+            <div class="messages-header">
+                @if (_viewMode == "channel")
+                {
+                    var ch = Mesh.Container.Channels.FirstOrDefault(c => c.Index == _selectedChannelIndex);
+                    <span>@(ch != null ? GetChannelLabel(ch) : $"Channel {_selectedChannelIndex}")</span>
+                    <span class="text-muted small ms-2">ch @_selectedChannelIndex</span>
+                }
+                else
+                {
+                    <span>@Mesh.Container.GetNodeDisplayName(_selectedDmNodeId ?? 0)</span>
+                    <span class="text-muted small ms-2">direct</span>
+                }
+            </div>
+
+            <div class="chat-messages flex-grow-1 messages__scroll">
+                @{
+                    var visibleMessages = CurrentMessages.ToList();
+                }
+                @if (!visibleMessages.Any())
+                {
+                    <div class="text-center text-muted py-5">No messages yet. Send one below!</div>
+                }
+                else
+                {
+                    @foreach (var msg in visibleMessages)
+                    {
+                        <div class="chat-bubble-wrap @(msg.IsOwn ? "chat-bubble-wrap--own" : "chat-bubble-wrap--other")">
+                            @if (!msg.IsOwn)
+                            {
+                                <div class="chat-sender">@msg.FromNodeName</div>
+                            }
+                            <div class="chat-bubble">
+                                <div class="chat-text">@msg.Text</div>
+                                <div class="chat-time d-flex gap-2 align-items-center">
+                                    <span>@msg.Timestamp.ToString("HH:mm:ss")</span>
+                                    @if (msg.IsOwn)
+                                    {
+                                        @if (msg.IsFailed)
+                                        {
+                                            <span class="ack-icon ack-icon--failed" title="Delivery failed">✕</span>
+                                        }
+                                        else if (msg.IsAcked)
+                                        {
+                                            <span class="ack-icon ack-icon--acked" title="Delivered">✓✓</span>
+                                        }
+                                        else if (msg.PacketId != 0)
+                                        {
+                                            <span class="ack-icon ack-icon--pending" title="Sent, awaiting ACK">✓</span>
+                                        }
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+
+            <div class="chat-input-area d-flex gap-2 mt-3">
+                <input class="form-control"
+                       placeholder="@InputPlaceholder"
+                       @bind="_draft"
+                       @bind:event="oninput"
+                       @onkeydown="OnKeyDown"
+                       disabled="@_sending"
+                       maxlength="200" />
+                <button class="btn btn-primary"
+                        @onclick="SendMessage"
+                        disabled="@(string.IsNullOrWhiteSpace(_draft) || _sending)">
+                    Send
+                </button>
+            </div>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <div class="text-danger small mt-1">@_error</div>
             }
         </div>
-
-        <div class="chat-input-area d-flex gap-2 mt-3">
-            <input class="form-control"
-                   placeholder="Type a message..."
-                   @bind="_draft"
-                   @bind:event="oninput"
-                   @onkeydown="OnKeyDown"
-                   disabled="@_sending"
-                   maxlength="200" />
-            <button class="btn btn-primary"
-                    @onclick="SendMessage"
-                    disabled="@(string.IsNullOrWhiteSpace(_draft) || _sending)">
-                Send
-            </button>
-        </div>
-
-        @if (!string.IsNullOrEmpty(_error))
-        {
-            <div class="text-danger small mt-1">@_error</div>
-        }
     </div>
 }
 </div>
 
 @code {
+    private string _viewMode = "channel";
+    private int _selectedChannelIndex;
+    private uint? _selectedDmNodeId;
+    private bool _showNewDm;
+    private uint _newDmNodeId;
     private string _draft = string.Empty;
     private bool _sending;
     private string _error = string.Empty;
+
+    private IEnumerable<Channel> ActiveChannels =>
+        Mesh.Container.Channels.Any()
+            ? Mesh.Container.Channels.Where(c => c.Role != Channel.Types.Role.Disabled).OrderBy(c => c.Index)
+            : [new Channel { Index = 0, Role = Channel.Types.Role.Primary }];
+
+    private IEnumerable<uint> DmNodeIds => Mesh.Messages
+        .Where(m => m.DestNodeId.HasValue)
+        .Select(m => m.IsOwn ? m.DestNodeId!.Value : m.FromNodeId)
+        .Distinct();
+
+    private IEnumerable<NodeInfo> OtherNodes
+    {
+        get
+        {
+            var ownNum = Mesh.Container.MyNodeInfo?.MyNodeNum ?? 0;
+            return Mesh.Container.Nodes.Where(n => n.Num != ownNum).OrderBy(n => Mesh.Container.GetNodeDisplayName(n.Num));
+        }
+    }
+
+    private IEnumerable<Models.ChatMessage> CurrentMessages =>
+        _viewMode == "channel"
+            ? Mesh.Messages.Where(m => !m.DestNodeId.HasValue && m.ChannelIndex == _selectedChannelIndex)
+            : Mesh.Messages.Where(m => m.DestNodeId.HasValue &&
+                (m.IsOwn ? m.DestNodeId == _selectedDmNodeId : m.FromNodeId == _selectedDmNodeId));
+
+    private string InputPlaceholder => _viewMode == "dm" && _selectedDmNodeId.HasValue
+        ? $"Message {Mesh.Container.GetNodeDisplayName(_selectedDmNodeId.Value)}…"
+        : "Type a message…";
+
+    private int UnreadCount(string mode, int channelIdx, uint nodeId) => 0; // placeholder for future unread tracking
+
+    private string GetChannelLabel(Channel ch) =>
+        !string.IsNullOrEmpty(ch.Settings?.Name) ? ch.Settings.Name :
+        ch.Role == Channel.Types.Role.Primary ? "Primary" : $"Channel {ch.Index}";
 
     protected override void OnInitialized() => Mesh.StateChanged += OnStateChanged;
 
@@ -74,6 +216,27 @@ else
     }
 
     private void OnStateChanged() => InvokeAsync(StateHasChanged);
+
+    private void SelectChannel(int index)
+    {
+        _viewMode = "channel";
+        _selectedChannelIndex = index;
+        _showNewDm = false;
+    }
+
+    private void SelectDm(uint nodeId)
+    {
+        _viewMode = "dm";
+        _selectedDmNodeId = nodeId;
+        _showNewDm = false;
+    }
+
+    private void StartNewDm()
+    {
+        if (_newDmNodeId == 0) return;
+        SelectDm(_newDmNodeId);
+        _newDmNodeId = 0;
+    }
 
     private async Task OnKeyDown(KeyboardEventArgs e)
     {
@@ -92,7 +255,10 @@ else
 
         try
         {
-            await Mesh.SendTextMessageAsync(text);
+            if (_viewMode == "dm" && _selectedDmNodeId.HasValue)
+                await Mesh.SendTextMessageAsync(text, destNodeId: _selectedDmNodeId.Value);
+            else
+                await Mesh.SendTextMessageAsync(text, channel: (uint)_selectedChannelIndex);
         }
         catch (Exception ex)
         {
