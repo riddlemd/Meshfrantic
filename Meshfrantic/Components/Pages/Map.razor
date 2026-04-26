@@ -17,11 +17,25 @@ else
     var positioned = Mesh.Container.Nodes.Count(n =>
         n.Position != null && (n.Position.LatitudeI != 0 || n.Position.LongitudeI != 0));
 
-    <div class="mb-2 small text-muted">@positioned of @total node(s) have GPS position data.</div>
+    <div class="d-flex align-items-center gap-3 mb-2 flex-wrap">
+        <span class="small text-muted">@positioned of @total node(s) have GPS position.</span>
+        <div class="d-flex gap-2">
+            <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" role="switch"
+                       id="layer-nodes" @bind="_showNodes" @bind:after="OnLayerToggle" />
+                <label class="form-check-label small" for="layer-nodes">Nodes</label>
+            </div>
+            <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" role="switch"
+                       id="layer-waypoints" @bind="_showWaypoints" @bind:after="OnLayerToggle" />
+                <label class="form-check-label small" for="layer-waypoints">Waypoints (@Mesh.Waypoints.Count)</label>
+            </div>
+        </div>
+    </div>
 
-    @if (positioned == 0)
+    @if (positioned == 0 && Mesh.Waypoints.Count == 0)
     {
-        <div class="alert alert-secondary">No nodes with position data yet.</div>
+        <div class="alert alert-secondary">No nodes with position data or waypoints yet.</div>
     }
 
     <RealTimeMap @ref="_map" height="600px" width="100%" OnAfterMapLoaded="OnMapLoaded" />
@@ -32,6 +46,8 @@ else
     private RealTimeMap? _map;
     private bool _mapReady;
     private bool _wasConnected;
+    private bool _showNodes = true;
+    private bool _showWaypoints = true;
 
     protected override void OnInitialized()
     {
@@ -56,6 +72,12 @@ else
     {
         _mapReady = true;
         await UpdateMarkersAsync();
+    }
+
+    private async Task OnLayerToggle()
+    {
+        if (_mapReady && _map != null)
+            await UpdateMarkersAsync();
     }
 
     private async Task UpdateMarkersAsync()
@@ -85,6 +107,16 @@ else
             fillOpacity = 1
         };
 
+        _map.Geometric.Points.Appearance(item => item.type == "waypoint").pattern = new RealTimeMap.PointSymbol()
+        {
+            radius = 7,
+            fillColor = "#ffc107",
+            color = "#000000",
+            weight = 1,
+            opacity = 1,
+            fillOpacity = 0.9
+        };
+
         _map.Geometric.Points.Appearance().pattern = new RealTimeMap.PointTooltip()
         {
             content = "${value}",
@@ -93,39 +125,72 @@ else
         };
     }
 
-    private List<RealTimeMap.StreamPoint> GetPoints(uint ownNum) =>
-        Mesh.Container.Nodes
-            .Where(n => n.Position != null && (n.Position.LatitudeI != 0 || n.Position.LongitudeI != 0))
-            .Select(n =>
-            {
-                var lat = n.Position!.LatitudeI / 1e7;
-                var lng = n.Position.LongitudeI / 1e7;
-                var name = n.User?.LongName?.Length > 0 ? n.User.LongName
-                         : n.User?.ShortName?.Length > 0 ? n.User.ShortName
-                         : "!" + n.Num.ToString("x8");
-                var alt = n.Position.Altitude != 0 ? $"{n.Position.Altitude} m" : "—";
-                var snr = n.Snr != 0 ? $"{n.Snr:F1} dB" : "—";
-                var heard = n.LastHeard > 0
-                    ? TimeAgo(DateTimeOffset.FromUnixTimeSeconds(n.LastHeard).LocalDateTime)
-                    : "—";
-                var ownBadge = n.Num == ownNum ? " <span style=\"color:#ff6600\">[YOU]</span>" : "";
-                return new RealTimeMap.StreamPoint
+    private List<RealTimeMap.StreamPoint> GetPoints(uint ownNum)
+    {
+        var points = new List<RealTimeMap.StreamPoint>();
+
+        if (_showNodes)
+        {
+            points.AddRange(Mesh.Container.Nodes
+                .Where(n => n.Position != null && (n.Position.LatitudeI != 0 || n.Position.LongitudeI != 0))
+                .Select(n =>
                 {
-                    guid = Guid.NewGuid(),
-                    latitude = lat,
-                    longitude = lng,
-                    type = n.Num == ownNum ? "own" : "peer",
-                    value = $"<div style=\"font-family:monospace;min-width:160px\">" +
-                            $"<strong>{name}</strong>{ownBadge}<br>" +
-                            $"<small>!{n.Num:x8}</small><br><hr style=\"margin:4px 0\">" +
-                            $"Coords: {lat:F5}, {lng:F5}<br>" +
-                            $"Alt: {alt}<br>" +
-                            $"SNR: {snr}<br>" +
-                            $"Heard: {heard}" +
-                            $"</div>"
-                };
-            })
-            .ToList();
+                    var lat = n.Position!.LatitudeI / 1e7;
+                    var lng = n.Position.LongitudeI / 1e7;
+                    var name = n.User?.LongName?.Length > 0 ? n.User.LongName
+                             : n.User?.ShortName?.Length > 0 ? n.User.ShortName
+                             : "!" + n.Num.ToString("x8");
+                    var alt = n.Position.Altitude != 0 ? $"{n.Position.Altitude} m" : "—";
+                    var snr = n.Snr != 0 ? $"{n.Snr:F1} dB" : "—";
+                    var heard = n.LastHeard > 0
+                        ? TimeAgo(DateTimeOffset.FromUnixTimeSeconds(n.LastHeard).LocalDateTime)
+                        : "—";
+                    var ownBadge = n.Num == ownNum ? " <span style=\"color:#ff6600\">[YOU]</span>" : "";
+                    return new RealTimeMap.StreamPoint
+                    {
+                        guid = Guid.NewGuid(),
+                        latitude = lat,
+                        longitude = lng,
+                        type = n.Num == ownNum ? "own" : "peer",
+                        value = $"<div style=\"font-family:monospace;min-width:160px\">" +
+                                $"<strong>{name}</strong>{ownBadge}<br>" +
+                                $"<small>!{n.Num:x8}</small><br><hr style=\"margin:4px 0\">" +
+                                $"Coords: {lat:F5}, {lng:F5}<br>" +
+                                $"Alt: {alt}<br>" +
+                                $"SNR: {snr}<br>" +
+                                $"Heard: {heard}" +
+                                $"</div>"
+                    };
+                }));
+        }
+
+        if (_showWaypoints)
+        {
+            var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            points.AddRange(Mesh.Waypoints.Values
+                .Where(wp => wp.LatitudeI != 0 || wp.LongitudeI != 0)
+                .Where(wp => wp.Expire == 0 || wp.Expire > now)
+                .Select(wp =>
+                {
+                    var lat = wp.LatitudeI / 1e7;
+                    var lng = wp.LongitudeI / 1e7;
+                    return new RealTimeMap.StreamPoint
+                    {
+                        guid = Guid.NewGuid(),
+                        latitude = lat,
+                        longitude = lng,
+                        type = "waypoint",
+                        value = $"<div style=\"font-family:monospace;min-width:140px\">" +
+                                $"<strong>📍 {wp.Name}</strong><br>" +
+                                $"<small>{wp.Description}</small><br><hr style=\"margin:4px 0\">" +
+                                $"Coords: {lat:F5}, {lng:F5}" +
+                                $"</div>"
+                    };
+                }));
+        }
+
+        return points;
+    }
 
     private static string TimeAgo(DateTime dt)
     {

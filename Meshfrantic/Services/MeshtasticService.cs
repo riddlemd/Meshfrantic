@@ -17,6 +17,7 @@ public class MeshtasticService : IDisposable
     private readonly Dictionary<uint, ChatMessage> _pendingAcks = [];
     private readonly Dictionary<uint, NodeTelemetry> _nodeTelemetry = [];
     private readonly Dictionary<uint, List<uint>> _tracerouteResults = [];
+    private readonly Dictionary<uint, Waypoint> _waypoints = [];
     private readonly SemaphoreSlim _sendLock = new(1, 1);
 
     public event Action? StateChanged;
@@ -28,6 +29,7 @@ public class MeshtasticService : IDisposable
     public IReadOnlyList<ChatMessage> Messages => _messages;
     public IReadOnlyDictionary<uint, NodeTelemetry> NodeTelemetryMap => _nodeTelemetry;
     public IReadOnlyDictionary<uint, List<uint>> TracerouteResults => _tracerouteResults;
+    public IReadOnlyDictionary<uint, Waypoint> Waypoints => _waypoints;
 
     public MeshtasticService(ILogger<MeshtasticService> logger)
     {
@@ -56,6 +58,7 @@ public class MeshtasticService : IDisposable
             _pendingAcks.Clear();
             _nodeTelemetry.Clear();
             _tracerouteResults.Clear();
+            _waypoints.Clear();
             ConnectedPort = port;
             IsConnected = true;
 
@@ -389,6 +392,9 @@ public class MeshtasticService : IDisposable
             case PortNum.TracerouteApp:
                 HandleTraceroute(packet);
                 break;
+            case PortNum.WaypointApp:
+                HandleWaypoint(packet);
+                break;
         }
     }
 
@@ -415,6 +421,24 @@ public class MeshtasticService : IDisposable
             DestNodeId = destNodeId,
             PacketId = packet.Id
         });
+    }
+
+    private void HandleWaypoint(MeshPacket packet)
+    {
+        var wp = Waypoint.Parser.ParseFrom(packet.Decoded.Payload);
+        if (wp.Id == 0) return;
+
+        var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        if (wp.Expire > 0 && wp.Expire < now)
+        {
+            _waypoints.Remove(wp.Id);
+            _logger.LogDebug("Waypoint {Id} expired, removed", wp.Id);
+        }
+        else
+        {
+            _waypoints[wp.Id] = wp;
+            _logger.LogDebug("Waypoint {Id} ({Name}) updated", wp.Id, wp.Name);
+        }
     }
 
     private void HandleTraceroute(MeshPacket packet)
