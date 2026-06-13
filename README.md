@@ -112,6 +112,34 @@ Blazor Server — single `MeshtasticService` singleton drives the serial connect
 
 ## Dependencies
 
-- [`Meshtastic`](https://www.nuget.org/packages/Meshtastic) 2.0.8 — C# client library for the Meshtastic protobuf protocol
-- [`LeafletForBlazor`](https://www.nuget.org/packages/LeafletForBlazor) — interactive map component
-- [`System.IO.Ports`](https://www.nuget.org/packages/System.IO.Ports) 10.0.6 — serial port access
+- [`Meshtastic`](https://www.nuget.org/packages/Meshtastic) 2.0.8 — C# client library for the Meshtastic protobuf protocol (GPL-3.0)
+- [`LeafletForBlazor`](https://www.nuget.org/packages/LeafletForBlazor) 2.4.6.28 — interactive map component
+- [`System.IO.Ports`](https://www.nuget.org/packages/System.IO.Ports) 10.0.6 — serial port access (MIT)
+- [`Tmds.DBus`](https://www.nuget.org/packages/Tmds.DBus) 0.92.0 — D-Bus access for Linux serial enumeration (MIT)
+- [`Serilog.AspNetCore`](https://www.nuget.org/packages/Serilog.AspNetCore) 9.0.0 + [`Sinks.File`](https://www.nuget.org/packages/Serilog.Sinks.File) / [`Sinks.Console`](https://www.nuget.org/packages/Serilog.Sinks.Console) — structured logging (Apache-2.0)
+
+See [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md) for the full dependency license audit.
+
+## License
+
+Meshfrantic is licensed under the **GNU General Public License v3.0** — see [`LICENSE.txt`](LICENSE.txt).
+
+```
+Meshfrantic — a Blazor client for Meshtastic LoRa mesh radios
+Copyright (C) 2026 Michael Riddle
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+```
+
+> GPL-3.0 is required here rather than a permissive license such as MIT, because the
+> core [`Meshtastic`](https://github.com/meshtastic/c-sharp) client library is GPL-3.0
+> (strong copyleft) and Meshfrantic links against it directly. Third-party component
+> licenses are documented in [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md).
