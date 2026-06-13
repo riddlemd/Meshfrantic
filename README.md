@@ -1,6 +1,6 @@
 # Meshfrantic
 
-A .NET 10 Blazor Server application for interfacing with a [Meshtastic](https://meshtastic.org/) LoRa mesh radio node over USB/serial.
+A .NET 10 Blazor Server application for interfacing with a [Meshtastic](https://meshtastic.org/) LoRa mesh radio node over USB/serial or TCP.
 
 ## Features
 
@@ -20,7 +20,9 @@ A .NET 10 Blazor Server application for interfacing with a [Meshtastic](https://
 ## Requirements
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
-- A Meshtastic device connected via USB/serial (e.g. T-Beam, Heltec, RAK)
+- A Meshtastic device — either:
+  - Connected via **USB/serial** (e.g. T-Beam, Heltec, RAK), or
+  - Reachable over **TCP** via [meshtasticd](https://meshtastic.org/docs/software/linux-native/) (the Linux-native Meshtastic daemon)
 - Windows, Linux, or macOS
 
 ## Getting Started
@@ -31,7 +33,32 @@ cd meshfrantic/Meshfrantic
 dotnet run
 ```
 
-Open `https://localhost:5001` in your browser, select your COM port, and click **Connect**.
+Open `https://localhost:5001` in your browser and connect:
+
+- **Serial** — select your COM port from the dropdown and click **Connect**
+- **TCP** — switch the mode selector to TCP, enter the host and port (default `localhost:4403`), and click **Connect**
+
+### meshtasticd (TCP)
+
+meshtasticd is the official Meshtastic daemon for Linux/Docker. It exposes the same protobuf API over TCP port 4403 and supports a wider range of hardware including CH341-based USB LoRa sticks. A minimal Docker Compose setup:
+
+```yaml
+services:
+  meshtasticd:
+    image: meshtastic/meshtasticd:beta
+    container_name: meshtasticd
+    restart: unless-stopped
+    ports:
+      - "4403:4403"
+    volumes:
+      - ./config.yaml:/etc/meshtasticd/config.yaml:ro
+      - ./data:/var/lib/meshtasticd
+    command: ["sh", "-cx", "meshtasticd --fsdir=/var/lib/meshtasticd"]
+```
+
+Meshfrantic handles meshtasticd restarts gracefully — config saves that trigger a daemon reboot automatically reconnect without dropping the UI.
+
+> **Note on USB LoRa hardware for meshtasticd:** The daemon requires direct SPI access to the LoRa chip. CH341-based USB LoRa sticks (e.g. MeshStick, Pinedio, Meshtoad E22 — USB PID `0x5512`) work natively.
 
 ## Themes
 
