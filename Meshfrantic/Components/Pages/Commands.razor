@@ -171,13 +171,23 @@ else
 
     private void OnStateChanged() => InvokeAsync(StateHasChanged);
 
-    private async Task ExecuteCommand(string label, Func<Task> action)
+    private async Task ExecuteCommand(string label, Func<Task> action, bool rebootsDevice = false)
     {
         _busy = true;
         try
         {
             await action();
-            _log.Add(new LogEntry($"{label}: sent successfully", true));
+            if (rebootsDevice && Mesh.IsTcpConnection)
+            {
+                _log.Add(new LogEntry($"{label}: sent — reconnecting...", true));
+                StateHasChanged();
+                await Mesh.ReconnectAfterRebootAsync(2);
+                _log.Add(new LogEntry($"{label}: daemon restarted", true));
+            }
+            else
+            {
+                _log.Add(new LogEntry($"{label}: sent successfully", true));
+            }
         }
         catch (Exception ex)
         {
@@ -194,23 +204,30 @@ else
     private async Task Reboot()
     {
         _showReboot = false;
-        await ExecuteCommand("Reboot", () => Mesh.RebootAsync(5));
+        await ExecuteCommand("Reboot", () => Mesh.RebootAsync(2), rebootsDevice: true);
     }
 
     private async Task FactoryReset()
     {
         _showFactoryReset = false;
-        await ExecuteCommand("Factory Reset", Mesh.FactoryResetAsync);
+        await ExecuteCommand("Factory Reset", Mesh.FactoryResetAsync, rebootsDevice: true);
     }
 
     private async Task ResetNodeDb()
     {
         _showResetDb = false;
-        await ExecuteCommand("Reset Node DB", Mesh.ResetNodeDbAsync);
+        await ExecuteCommand("Reset Node DB", Mesh.ResetNodeDbAsync, rebootsDevice: true);
     }
 
-    private Task SetOwner() => ExecuteCommand("Set Owner",
-        () => Mesh.SetOwnerAsync(_longName.Trim(), _shortName.Trim()));
+    private async Task SetOwner()
+    {
+        await ExecuteCommand("Set Owner", async () =>
+        {
+            await Mesh.SetOwnerAsync(_longName.Trim(), _shortName.Trim());
+            if (Mesh.IsTcpConnection)
+                await Mesh.RebootAsync(2);
+        }, rebootsDevice: true);
+    }
 
     public void Dispose() => Mesh.StateChanged -= OnStateChanged;
 }

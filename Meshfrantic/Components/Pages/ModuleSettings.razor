@@ -16,7 +16,7 @@
 }
 else
 {
-    <p class="text-muted small mb-3">Changes are written to the device immediately. Reconnect for all changes to take effect.</p>
+    <p class="text-muted small mb-3">Changes are written immediately. @(Mesh.IsTcpConnection ? "The daemon restarts automatically to apply them." : "Reconnect for all changes to take effect.")</p>
 
     <div class="config-tabs mb-4">
         @foreach (var tab in new[] { ("telemetry","Telemetry"), ("mqtt","MQTT"), ("storeforward","Store & Forward"), ("neighborinfo","Neighbor Info"), ("extnotify","Ext. Notify"), ("serial","Serial") })
@@ -463,7 +463,17 @@ else
         try
         {
             await Mesh.SetModuleConfigAsync(config);
-            _status = "Saved. Reconnect for changes to fully take effect.";
+            if (Mesh.IsTcpConnection)
+            {
+                _status = "Saved. Restarting daemon...";
+                StateHasChanged();
+                await Mesh.RestartDaemonAsync();
+                _status = "Saved. Daemon restarted.";
+            }
+            else
+            {
+                _status = "Saved. Reconnect for changes to fully take effect.";
+            }
             _statusOk = true;
         }
         catch (Exception ex)

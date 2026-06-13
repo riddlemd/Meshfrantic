@@ -16,6 +16,10 @@ public class MeshtasticReaderService : BackgroundService
         // The read loop is started by MeshtasticService.ConnectAsync(), not here.
         // This service just keeps alive until the app shuts down.
         _logger.LogInformation("MeshtasticReaderService started");
-        await Task.Delay(Timeout.Infinite, stoppingToken).ConfigureAwait(false);
+        try
+        {
+            await Task.Delay(Timeout.Infinite, stoppingToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) { /* normal shutdown */ }
     }
 }

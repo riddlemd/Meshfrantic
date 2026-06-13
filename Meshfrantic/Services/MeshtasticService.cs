@@ -4,13 +4,14 @@ using Meshtastic.Data.MessageFactories;
 using Google.Protobuf;
 using Meshtastic.Protobufs;
 using Meshfrantic.Models;
+using System.Net.Sockets;
 
 namespace Meshfrantic.Services;
 
 public class MeshtasticService : IDisposable
 {
     private readonly ILogger<MeshtasticService> _logger;
-    private SerialConnection? _connection;
+    private DeviceConnection? _connection;
     private CancellationTokenSource? _readCts;
     private Task? _readTask;
     private readonly List<ChatMessage> _messages = [];
@@ -19,10 +20,15 @@ public class MeshtasticService : IDisposable
     private readonly Dictionary<uint, List<uint>> _tracerouteResults = [];
     private readonly Dictionary<uint, Waypoint> _waypoints = [];
     private readonly SemaphoreSlim _sendLock = new(1, 1);
+    private string? _tcpHost;
+    private int _tcpPort;
+    private bool _rebooting;
 
     public event Action? StateChanged;
 
     public bool IsConnected { get; private set; }
+    public bool IsRebooting => _rebooting;
+    public bool IsTcpConnection => _connection is TcpConnection;
     public string? ConnectedPort { get; private set; }
     public DeviceStateContainer Container { get; private set; } = new();
     public IReadOnlyList<string> AvailablePorts { get; private set; } = [];
@@ -73,6 +79,41 @@ public class MeshtasticService : IDisposable
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to connect to {Port}", port);
+            _connection = null;
+            IsConnected = false;
+            ConnectedPort = null;
+            StateChanged?.Invoke();
+            throw;
+        }
+    }
+
+    public async Task ConnectTcpAsync(string host, int port = 4403)
+    {
+        if (IsConnected) await DisconnectAsync();
+
+        try
+        {
+            Container = new DeviceStateContainer();
+            _connection = new TcpConnection(_logger, host, Container, port);
+            _messages.Clear();
+            _pendingAcks.Clear();
+            _nodeTelemetry.Clear();
+            _tracerouteResults.Clear();
+            _waypoints.Clear();
+            _tcpHost = host;
+            _tcpPort = port;
+            ConnectedPort = $"{host}:{port}";
+            IsConnected = true;
+
+            _readCts = new CancellationTokenSource();
+            _readTask = Task.Run(() => RunReadLoopAsync(_readCts.Token));
+
+            StateChanged?.Invoke();
+            _logger.LogInformation("Connected to meshtasticd at {Host}:{Port}", host, port);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to connect to {Host}:{Port}", host, port);
             _connection = null;
             IsConnected = false;
             ConnectedPort = null;
@@ -191,7 +232,22 @@ public class MeshtasticService : IDisposable
             var begin = factory.CreateBeginEditSettingsMessage();
             await _connection.WriteToRadio(_connection.ToRadioFactory.CreateMeshPacketMessage(begin));
 
-            var setConfig = factory.CreateSetModuleConfigMessage(config);
+            object subConfig = config.PayloadVariantCase switch
+            {
+                ModuleConfig.PayloadVariantOneofCase.Audio               => (object)config.Audio,
+                ModuleConfig.PayloadVariantOneofCase.CannedMessage       => config.CannedMessage,
+                ModuleConfig.PayloadVariantOneofCase.DetectionSensor     => config.DetectionSensor,
+                ModuleConfig.PayloadVariantOneofCase.ExternalNotification => config.ExternalNotification,
+                ModuleConfig.PayloadVariantOneofCase.Mqtt                => config.Mqtt,
+                ModuleConfig.PayloadVariantOneofCase.NeighborInfo        => config.NeighborInfo,
+                ModuleConfig.PayloadVariantOneofCase.RangeTest           => config.RangeTest,
+                ModuleConfig.PayloadVariantOneofCase.RemoteHardware      => config.RemoteHardware,
+                ModuleConfig.PayloadVariantOneofCase.Serial              => config.Serial,
+                ModuleConfig.PayloadVariantOneofCase.StoreForward        => config.StoreForward,
+                ModuleConfig.PayloadVariantOneofCase.Telemetry           => config.Telemetry,
+                _ => throw new ArgumentException($"Unsupported ModuleConfig variant: {config.PayloadVariantCase}", nameof(config))
+            };
+            var setConfig = factory.CreateSetModuleConfigMessage(subConfig);
             await _connection.WriteToRadio(_connection.ToRadioFactory.CreateMeshPacketMessage(setConfig));
 
             var commit = factory.CreateCommitEditSettingsMessage();
@@ -218,7 +274,18 @@ public class MeshtasticService : IDisposable
             var begin = factory.CreateBeginEditSettingsMessage();
             await _connection.WriteToRadio(_connection.ToRadioFactory.CreateMeshPacketMessage(begin));
 
-            var setConfig = factory.CreateSetConfigMessage(config);
+            object subConfig = config.PayloadVariantCase switch
+            {
+                Config.PayloadVariantOneofCase.Bluetooth => (object)config.Bluetooth,
+                Config.PayloadVariantOneofCase.Device    => config.Device,
+                Config.PayloadVariantOneofCase.Display   => config.Display,
+                Config.PayloadVariantOneofCase.Lora      => config.Lora,
+                Config.PayloadVariantOneofCase.Network   => config.Network,
+                Config.PayloadVariantOneofCase.Position  => config.Position,
+                Config.PayloadVariantOneofCase.Power     => config.Power,
+                _ => throw new ArgumentException($"Unsupported Config variant: {config.PayloadVariantCase}", nameof(config))
+            };
+            var setConfig = factory.CreateSetConfigMessage(subConfig);
             await _connection.WriteToRadio(_connection.ToRadioFactory.CreateMeshPacketMessage(setConfig));
 
             var commit = factory.CreateCommitEditSettingsMessage();
@@ -242,6 +309,64 @@ public class MeshtasticService : IDisposable
         var packet = factory.CreateRebootMessage(delaySeconds, isOta: false);
         var toRadio = _connection.ToRadioFactory.CreateMeshPacketMessage(packet);
         await _connection.WriteToRadio(toRadio);
+    }
+
+    public async Task RestartDaemonAsync()
+    {
+        if (!IsConnected || !IsTcpConnection || _tcpHost == null)
+            throw new InvalidOperationException("Not connected via TCP");
+
+        const int rebootDelaySecs = 1;
+        _logger.LogInformation("Sending reboot to daemon at {Host}:{Port}", _tcpHost, _tcpPort);
+        await RebootAsync(rebootDelaySecs);
+        await ReconnectAfterRebootAsync(rebootDelaySecs);
+    }
+
+    public async Task ReconnectAfterRebootAsync(int rebootDelaySecs = 2)
+    {
+        if (_tcpHost == null)
+            throw new InvalidOperationException("Not connected via TCP");
+
+        var host = _tcpHost;
+        var port = _tcpPort;
+
+        _rebooting = true;
+        StateChanged?.Invoke();
+        try
+        {
+            await DisconnectAsync();
+
+            await Task.Delay(rebootDelaySecs * 1000);
+            var deadline = DateTime.UtcNow.AddSeconds(10);
+            while (DateTime.UtcNow < deadline)
+            {
+                try
+                {
+                    using var probe = new TcpClient();
+                    await probe.ConnectAsync(host, port).WaitAsync(TimeSpan.FromMilliseconds(500));
+                    break;
+                }
+                catch { await Task.Delay(200); }
+            }
+
+            for (int attempt = 0; attempt < 5; attempt++)
+            {
+                _logger.LogInformation("Reconnecting to {Host}:{Port} after reboot (attempt {Attempt})",
+                    host, port, attempt + 1);
+                await ConnectTcpAsync(host, port);
+
+                await Task.Delay(1000);
+                if (IsConnected) return;
+
+                _logger.LogWarning("Connection dropped immediately after reconnect, retrying...");
+                if (attempt < 4) await Task.Delay(500);
+            }
+        }
+        finally
+        {
+            _rebooting = false;
+            StateChanged?.Invoke();
+        }
     }
 
     public async Task FactoryResetAsync()
@@ -356,9 +481,10 @@ public class MeshtasticService : IDisposable
             );
         }
         catch (OperationCanceledException) { /* normal shutdown */ }
-        catch (IOException ex)
+        catch (Exception ex) when (ex is IOException or SocketException or ObjectDisposedException
+                                   && !ct.IsCancellationRequested)
         {
-            _logger.LogError(ex, "Serial read error — disconnecting");
+            _logger.LogError(ex, "Connection read error — disconnecting");
             _ = Task.Run(async () => await DisconnectAsync());
         }
         catch (Exception ex) when (!ct.IsCancellationRequested)

@@ -22,6 +22,10 @@
                             var name = nodeNum > 0 ? Mesh.Container.GetNodeDisplayName(nodeNum) : Mesh.ConnectedPort;
                             <span>@name</span>
                         }
+                        else if (Mesh.IsRebooting)
+                        {
+                            <span>Reconnecting...</span>
+                        }
                         else
                         {
                             <span>Disconnected</span>
@@ -40,31 +44,59 @@
                         }
                     </select>
 
-                    <span class="port-control__label">Port</span>
-                    <select class="form-select form-select-sm port-control__select"
-                            @bind="_selectedPort"
-                            disabled="@Mesh.IsConnected">
-                        <option value="">-- Select port --</option>
-                        @foreach (var port in Mesh.AvailablePorts)
-                        {
-                            <option value="@port">@port</option>
-                        }
+                    <select class="form-select form-select-sm" style="width:auto"
+                            value="@_useTcp.ToString().ToLower()"
+                            @onchange="OnConnectionModeChanged"
+                            disabled="@(Mesh.IsConnected || Mesh.IsRebooting)">
+                        <option value="false">Serial</option>
+                        <option value="true">TCP</option>
                     </select>
 
-                    <button class="btn btn-sm btn-outline-secondary"
-                            @onclick="RefreshPorts"
-                            disabled="@Mesh.IsConnected"
-                            title="Refresh ports">
-                        &#8635;
-                    </button>
+                    @if (!_useTcp)
+                    {
+                        <span class="port-control__label">Port</span>
+                        <select class="form-select form-select-sm port-control__select"
+                                @bind="_selectedPort"
+                                disabled="@(Mesh.IsConnected || Mesh.IsRebooting)">
+                            <option value="">-- Select port --</option>
+                            @foreach (var port in Mesh.AvailablePorts)
+                            {
+                                <option value="@port">@port</option>
+                            }
+                        </select>
 
-                    @if (!Mesh.IsConnected)
+                        <button class="btn btn-sm btn-outline-secondary"
+                                @onclick="RefreshPorts"
+                                disabled="@(Mesh.IsConnected || Mesh.IsRebooting)"
+                                title="Refresh ports">
+                            &#8635;
+                        </button>
+                    }
+                    else
+                    {
+                        <input class="form-control form-control-sm" style="width:130px"
+                               placeholder="host"
+                               @bind="_tcpHost"
+                               @bind:after="SaveTcpPrefs"
+                               disabled="@(Mesh.IsConnected || Mesh.IsRebooting)" />
+                        <input class="form-control form-control-sm" style="width:70px"
+                               type="number"
+                               @bind="_tcpPort"
+                               @bind:after="SaveTcpPrefs"
+                               disabled="@(Mesh.IsConnected || Mesh.IsRebooting)" />
+                    }
+
+                    @if (!Mesh.IsConnected && !Mesh.IsRebooting)
                     {
                         <button class="btn btn-sm btn-success"
                                 @onclick="Connect"
-                                disabled="@(string.IsNullOrEmpty(_selectedPort) || _busy)">
+                                disabled="@((_useTcp ? string.IsNullOrWhiteSpace(_tcpHost) : string.IsNullOrEmpty(_selectedPort)) || _busy)">
                             @if (_busy) { <span>Connecting...</span> } else { <span>Connect</span> }
                         </button>
+                    }
+                    else if (Mesh.IsRebooting)
+                    {
+                        <button class="btn btn-sm btn-success" disabled>Reconnecting...</button>
                     }
                     else
                     {
@@ -117,6 +149,9 @@
     private bool _busy;
     private string _error = string.Empty;
     private bool _themeLoaded = false;
+    private bool _useTcp = false;
+    private string _tcpHost = "localhost";
+    private int _tcpPort = 4403;
 
     private uint OwnNodeNum => Mesh.Container.MyNodeInfo?.MyNodeNum ?? 0;
 
@@ -141,14 +176,27 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        string? mode = null;
+
         if (firstRender && !_themeLoaded)
         {
             _selectedTheme = await JS.InvokeAsync<string>("getTheme");
+
+            mode = await JS.InvokeAsync<string?>("localStorage.getItem", "mesh_connection_mode");
+            if (mode == "tcp")
+            {
+                _useTcp = true;
+                var host = await JS.InvokeAsync<string?>("localStorage.getItem", "mesh_tcp_host");
+                var port = await JS.InvokeAsync<string?>("localStorage.getItem", "mesh_tcp_port");
+                if (!string.IsNullOrWhiteSpace(host)) _tcpHost = host;
+                if (int.TryParse(port, out var p)) _tcpPort = p;
+            }
+
             _themeLoaded = true;
             StateHasChanged();
         }
 
-        if (firstRender && !Mesh.IsConnected && Mesh.AvailablePorts.Count == 1)
+        if (firstRender && mode == "serial" && !Mesh.IsConnected && Mesh.AvailablePorts.Count == 1)
         {
             _selectedPort = Mesh.AvailablePorts[0];
             await Connect();
@@ -165,12 +213,14 @@
 
     private async Task Connect()
     {
-        if (string.IsNullOrEmpty(_selectedPort)) return;
         _busy = true;
         _error = string.Empty;
         try
         {
-            await Mesh.ConnectAsync(_selectedPort);
+            if (_useTcp)
+                await Mesh.ConnectTcpAsync(_tcpHost, _tcpPort);
+            else
+                await Mesh.ConnectAsync(_selectedPort);
         }
         catch (Exception ex)
         {
@@ -193,6 +243,18 @@
         {
             _busy = false;
         }
+    }
+
+    private async Task OnConnectionModeChanged(ChangeEventArgs e)
+    {
+        _useTcp = e.Value?.ToString() == "true";
+        await JS.InvokeVoidAsync("localStorage.setItem", "mesh_connection_mode", _useTcp ? "tcp" : "serial");
+    }
+
+    private async Task SaveTcpPrefs()
+    {
+        await JS.InvokeVoidAsync("localStorage.setItem", "mesh_tcp_host", _tcpHost);
+        await JS.InvokeVoidAsync("localStorage.setItem", "mesh_tcp_port", _tcpPort.ToString());
     }
 
     private async Task OnThemeChanged(ChangeEventArgs e)
